@@ -197,6 +197,15 @@ export interface DeviceRecording {
 	setFolder?(dir: string): Promise<void>
 	/** The device's file name (or name format), set before a take starts */
 	setFileName?(name: string): Promise<void>
+	/**
+	 * Optional: set a plain file name (no extension) for the next take. Sheet
+	 * naming uses this when it's there, otherwise setFileName. Give it when the
+	 * device's file name setting has codes of its own that a plain name must
+	 * not trip (OBS's %CCYY...). Either way, once the take has started the
+	 * device's previous file name setting is put back with setFileName (if
+	 * the user leaves "put it back" on).
+	 */
+	setTakeName?(name: string): Promise<void>
 }
 
 // ---- the two sides ------------------------------------------------------------

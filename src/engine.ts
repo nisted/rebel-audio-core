@@ -14,6 +14,7 @@ import { GestureReader, type Gesture } from './gesture.js'
 import { latestRelease, newestRelease, newVersionInfo, recompute, type UpdateSources, type VersionInfo } from './updates.js'
 import { Backups, Monitoring, Notices, Recorder, type FeatureHost } from './features.js'
 import type { BlockInfo, Device, DeviceHost, DeviceInfo, DeviceInputState, DeviceMeter } from './device.js'
+import { RecordingsFeature, type RecordingsOptions } from './recordings-feature.js'
 import {
 	type Store,
 	type InputSettings,
@@ -63,6 +64,10 @@ export interface EngineOptions {
 	updates: UpdateSources
 	/** What the routing section is called by default, e.g. 'Tracks' */
 	routingLabel?: string
+	/** Recordings (sheet naming, file manager, uploads): test seams. Optional. */
+	recordings?: RecordingsOptions
+	/** For {source} in recording names: the connection's name (default: the module name). Can change later: engine.sourceName */
+	sourceName?: string
 }
 
 /**
@@ -114,6 +119,10 @@ export class Engine extends EventEmitter {
 	readonly monitoring: Monitoring
 	readonly backups: Backups
 	readonly recorder: Recorder
+	/** Recordings: sheet naming, rename after stop, file manager, upload queue */
+	readonly recordings: RecordingsFeature
+	/** Used for {source} in recording names */
+	sourceName: string
 	/** Things this module just set, so the echo isn't taken for someone else's change */
 	#self = new Map<string, number>()
 	#updateTimer: NodeJS.Timeout | null = null
@@ -154,11 +163,31 @@ export class Engine extends EventEmitter {
 			recordSnoozeMin: () => this.store.page.recordSnoozeMin,
 			log: (l, m) => this.host.log(l, m),
 			changed: () => this.#stateChanged(),
+			beforeStart: () => this.recordings.beforeStart(),
 		}
+		this.sourceName = opts.sourceName ?? opts.appName
+		this.recordings = new RecordingsFeature(
+			{
+				store: () => this.store.recordings,
+				deviceFolder: () => this.recorder?.state.directory ?? '',
+				deviceFileName: () => this.recorder?.state.fileName ?? '',
+				recording: () => this.device?.recording,
+				sourceName: () => this.sourceName,
+				save: () => this.#dirty(),
+				changed: () => {
+					this.#stateChanged()
+					this.emit('recordings')
+				},
+				structureChanged: () => this.host.structureChanged(),
+				log: (l, m) => this.host.log(l, m),
+			},
+			opts.recordings,
+		)
 		this.notices = new Notices(() => this.#stateChanged())
 		this.monitoring = new Monitoring(fh)
 		this.backups = new Backups(fh, this.notices)
 		this.recorder = new Recorder(fh, this.notices)
+		this.recordings.start()
 	}
 
 	/** Note something this module is about to set */
@@ -192,6 +221,7 @@ export class Engine extends EventEmitter {
 	destroy(): void {
 		clearInterval(this.#tick)
 		this.recorder.destroy()
+		this.recordings.stop()
 		if (this.#updateTimer) clearInterval(this.#updateTimer)
 		for (const t of this.#fades.values()) clearInterval(t)
 		this.#fades.clear()
@@ -239,7 +269,12 @@ export class Engine extends EventEmitter {
 			inputRenamed: (oldId, newId, name) => mine() && this.#rename(oldId, newId, name),
 			inputChanged: (id, patch, blocksChanged) => mine() && this.#onChange(id, patch, !!blocksChanged),
 			meters: (list) => mine() && this.#onMeters(list),
-			record: (ev) => mine() && this.recorder.onEvent(ev),
+			record: (ev) => {
+				if (!mine()) return
+				const was = this.recorder.state.active
+				this.recorder.onEvent(ev)
+				this.recordings.onRecordEvent(ev, was)
+			},
 			setting: (id, key) => this.settings(id)[key],
 			version: (v) => {
 				if (!mine()) return
@@ -833,6 +868,9 @@ export class Engine extends EventEmitter {
 		if (key === 'pflMode' && v !== 'additive' && v !== 'exclusive') return
 		if (key === 'layout' && v !== 'strips' && v !== 'rows') return
 		if (key === 'law' && v !== 'desk' && v !== 'linear') return
+		if ((key === 'faderScaleSide' || key === 'meterScaleSide') && v !== 'left' && v !== 'right') return
+		if (key === 'meterPaleStrength' && ((v as number) < 0 || (v as number) > 1)) return
+		if ((key === 'capColour' || key === 'capLineColour') && !/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(v))) return
 		;(this.store.page as unknown as Record<string, unknown>)[key] = v
 		this.#dirty()
 		this.#stateChanged()
@@ -871,7 +909,8 @@ export class Engine extends EventEmitter {
 	// ---- export / import ----------------------------------------------------
 
 	exportJson(): string {
-		return JSON.stringify({ app: `companion-module-${this.opts.appId}`, exported: new Date().toISOString(), store: this.store }, null, 1)
+		const store = { ...this.store, recordings: RecordingsFeature.exportable(this.store.recordings) }
+		return JSON.stringify({ app: `companion-module-${this.opts.appId}`, exported: new Date().toISOString(), store }, null, 1)
 	}
 
 	/** Apply parts of an exported file. The current settings go to the autosave first. */
@@ -893,13 +932,17 @@ export class Engine extends EventEmitter {
 		if (!this.autosave) throw new Error('There is no autosave yet.')
 		const current = this.exportJson()
 		const parsed = JSON.parse(this.autosave) as { store?: unknown }
+		const saved = this.store.recordings.saved
 		this.store = loadStore(parsed.store ?? parsed, this.schema)
+		// the upload queue and sheet copy belong to this computer, not to the settings
+		this.store.recordings.saved = saved
 		this.autosave = current
 		this.#afterBulkChange()
 		return 'Settings rolled back to the autosave (the ones just replaced are now the autosave).'
 	}
 
 	#afterBulkChange(): void {
+		this.recordings.configure({})
 		for (const inp of this.inputs.values()) {
 			inp.autoLevel.reset()
 			for (const key of Object.keys(this.info.inputFields ?? {})) this.device?.settingChanged?.(inp.id, key)
@@ -949,6 +992,7 @@ export class Engine extends EventEmitter {
 			notices: this.notices.list,
 			recording: { ...this.recorder.state, plan: this.store.record, countdown: this.recorder.countdown() },
 			solo: this.monitoring.solo,
+			recordings: this.recordings.summary(),
 			store: {
 				defaults: this.store.defaults,
 				page: this.store.page,

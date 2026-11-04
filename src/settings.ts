@@ -309,6 +309,18 @@ export interface PageSettings {
 	tipsOnOpen: boolean
 	recordLeadMin: number
 	recordSnoozeMin: number
+	/** Unlit parts of the meters show their colour zones faintly */
+	meterPaleBack: boolean
+	/** How strong the faint zone colours are (0 = black, 1 = full colour) */
+	meterPaleStrength: number
+	/** The fader's dB markings: left or right of the fader */
+	faderScaleSide: 'left' | 'right'
+	/** The meters' dB markings: left or right of the meters */
+	meterScaleSide: 'left' | 'right'
+	/** The fader cap's colour */
+	capColour: string
+	/** The bright line across the middle of the fader cap */
+	capLineColour: string
 }
 
 export const PAGE_DEFAULTS: PageSettings = {
@@ -340,6 +352,12 @@ export const PAGE_DEFAULTS: PageSettings = {
 	tipsOnOpen: true,
 	recordLeadMin: 10,
 	recordSnoozeMin: 5,
+	meterPaleBack: true,
+	meterPaleStrength: 0.22,
+	faderScaleSide: 'left',
+	meterScaleSide: 'right',
+	capColour: '#7a2fe0',
+	capLineColour: '#ffffff',
 }
 
 export interface GestureSettings {
@@ -377,7 +395,26 @@ export interface Store {
 	inputs: Record<string, InputRecord>
 	/** The next planned recording start, if any */
 	record: RecordPlan
+	/** Recordings: sheet naming, file manager and upload settings, plus the saved queue (see recordings-feature.ts) */
+	recordings: RecordingsStore
 }
+
+/**
+ * What's kept for recordings. `settings` is the recordings library's (partial,
+ * defaults fill the rest); `saved` is its queue, last good sheet copy and row.
+ */
+export interface RecordingsStore {
+	/** Name, rename and upload recordings (off = the device names its files as it always has) */
+	enabled: boolean
+	/** Where this computer finds the recordings folder, when it isn't where the device says (blank = the device's folder) */
+	folderOverride: string
+	/** After a take has started with our name, put the device's own file name setting back */
+	restoreName: boolean
+	settings: Record<string, Record<string, unknown>>
+	saved: Record<string, unknown> | null
+}
+
+export const RECORDINGS_STORE_DEFAULTS: RecordingsStore = { enabled: false, folderOverride: '', restoreName: true, settings: {}, saved: null }
 
 export interface RecordPlan {
 	/** ISO time the recording is due to (re)start, or null */
@@ -404,6 +441,7 @@ export function newStore(schema: StoreSchema = CORE_SCHEMA): Store {
 		hidden: [],
 		inputs: {},
 		record: { ...RECORD_DEFAULTS },
+		recordings: { ...RECORDINGS_STORE_DEFAULTS, settings: {} },
 	}
 }
 
@@ -513,6 +551,16 @@ export function loadStore(raw: unknown, schema: StoreSchema = CORE_SCHEMA): Stor
 		snoozedUntil: typeof r.snoozedUntil === 'string' ? r.snoozedUntil : null,
 		dismissed: r.dismissed === true,
 	}
+	const rs = obj(src.recordings)
+	const sets: Record<string, Record<string, unknown>> = {}
+	for (const [k, v] of Object.entries(obj(rs.settings))) if (v && typeof v === 'object' && !Array.isArray(v)) sets[k] = { ...(v as Record<string, unknown>) }
+	store.recordings = {
+		enabled: rs.enabled === true,
+		folderOverride: typeof rs.folderOverride === 'string' ? rs.folderOverride : '',
+		restoreName: rs.restoreName !== false,
+		settings: sets,
+		saved: rs.saved && typeof rs.saved === 'object' && !Array.isArray(rs.saved) ? (rs.saved as Record<string, unknown>) : null,
+	}
 	return store
 }
 
@@ -554,7 +602,7 @@ export function coerceSetting(key: string, raw: unknown, schema: StoreSchema = C
 }
 
 /** Parts of an export that can be picked on import */
-export type ImportPart = 'page' | 'sections' | 'defaults' | 'gestures' | 'order' | `input:${string}`
+export type ImportPart = 'page' | 'sections' | 'defaults' | 'gestures' | 'order' | 'recordings' | `input:${string}`
 
 export function applyImport(store: Store, incoming: Store, parts: ImportPart[]): void {
 	for (const part of parts) {
@@ -567,6 +615,18 @@ export function applyImport(store: Store, incoming: Store, parts: ImportPart[]):
 		} else if (part === 'order') {
 			store.order = [...incoming.order]
 			store.hidden = [...incoming.hidden]
+		} else if (part === 'recordings') {
+			// settings only: the upload queue and sheet copy stay this computer's. Passwords left blank in an export are kept.
+			const keep = store.recordings.settings
+			const next = JSON.parse(JSON.stringify(incoming.recordings.settings)) as Record<string, Record<string, unknown>>
+			const oldDest = Array.isArray(keep.upload?.destinations) ? (keep.upload.destinations as Record<string, unknown>[]) : []
+			if (Array.isArray(next.upload?.destinations)) {
+				for (const d of next.upload.destinations as Record<string, unknown>[]) {
+					const was = oldDest.find((o) => o.id === d.id)
+					if (was && !d.password && was.password) d.password = was.password
+				}
+			}
+			store.recordings = { ...store.recordings, enabled: incoming.recordings.enabled, folderOverride: incoming.recordings.folderOverride, restoreName: incoming.recordings.restoreName, settings: next }
 		} else if (part.startsWith('input:')) {
 			const name = part.slice(6)
 			const rec = incoming.inputs[name]

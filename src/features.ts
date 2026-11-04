@@ -29,6 +29,8 @@ export interface FeatureHost {
 	recordSnoozeMin(): number
 	log(level: 'info' | 'warn' | 'debug', msg: string): void
 	changed(): void
+	/** Called just before a start (from anywhere in the module): recordings names the take here. Never throws. */
+	beforeStart?(): Promise<void>
 }
 
 // ---- notices (pop-ups on the page, variables in Companion) ------------------
@@ -417,7 +419,11 @@ export class Recorder {
 	}
 
 	start(): Promise<void> {
-		return Promise.resolve().then(() => this.#rec().start())
+		return Promise.resolve().then(async () => {
+			const r = this.#rec()
+			if (!this.state.active) await this.host.beforeStart?.()
+			return r.start()
+		})
 	}
 
 	stop(): Promise<void> {

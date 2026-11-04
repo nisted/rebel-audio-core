@@ -2,7 +2,7 @@
 
 The engine room of the Rebels' Companion audio modules. One brain, several mixers. 🍹
 
-Auto level (the thing we used to call the rider), calibrate, button gestures, CLOR pickup for Intech Grid faders, PFL and solo, backup feeds, recording plans and countdowns, the settings store, update checks, and the fader and meter web page. Write a fix here once and every module gets it.
+Auto level (the thing we used to call the rider), calibrate, button gestures, CLOR pickup for Intech Grid faders, PFL and solo, backup feeds, recording plans and countdowns, recordings (spreadsheet naming, file manager, uploads), the settings store, update checks, and the fader and meter web page, which can join up with other connections' pages. Write a fix here once and every module gets it.
 
 It doesn't know or care what desk it's driving. A module hands it a `Device` (see [`src/device.ts`](src/device.ts)): the device says what each input can do (fader, trim, mute, balance, delay, monitoring, routing, mix option, processing blocks...) and the page, actions and auto level draw themselves from that. No trim? No trim knob. Gain-reduction meters? You get GR bars.
 
@@ -33,9 +33,16 @@ The module's build runs `node core/scripts/embed-page.mjs` (turns `web/page.html
 - `src/autolevel.ts`: auto level and calibrate for one input.
 - `src/settings.ts`: the settings store, with migration from older stores.
 - `src/features.ts`: pop-ups, PFL and solo, backup feeds, recording.
-- `src/web.ts`, `web/page.html`: the page server and the page.
+- `src/web.ts`, `web/page.html`: the page server and the page (the endpoints are listed at the top of web.ts).
+- `src/discovery.ts`: pages saying hello on the network (UDP, port 48999 by default) so other pages can join them.
+- `src/recordings/`: the recordings library: sheet (Google link or CSV / Excel), naming, row picking, rename after stop, file manager, upload queue (rclone, share, FTP/SFTP via rclone, WebDAV, HTTP). No outside libraries.
+- `src/recordings-feature.ts`: that library wired to the engine and the device (`engine.recordings`), with the variables, actions and feedback hooks a module needs.
 - `src/law.ts`, `src/pickup.ts`, `src/gesture.ts`, `src/colour.ts`, `src/updates.ts`: the small stuff.
 - `test/`: tests against a pretend desk (`test/fake-device.ts`).
+
+## Joining pages
+
+Each page server answers with CORS headers and takes its PIN as `?pin=` or an `X-Rebel-Pin` header, so a page in the browser opens other connections' feeds directly. Give `WebServer` a `beacon: { port }` (and a `name`) and it announces itself; `/api/peers` lists who it has heard. Any mix of modules on the core joins up, as they all speak the same API.
 
 ## Testing
 

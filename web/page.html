@@ -68,6 +68,7 @@ main { flex: 1; overflow: auto; padding: 8px; min-height: 0; }
 .meters { display: flex; gap: 4px; }
 .meter { position: relative; width: 18px; display: flex; gap: 2px; padding: 10px 0; height: 100%; }
 .meter .ch { position: relative; flex: 1; background: #030305; overflow: hidden; }
+.meter .ch.pale { background-color: #030305; }
 .meter .bar { position: absolute; inset: 0; clip-path: inset(100% 0 0 0); }
 .meter .pk { position: absolute; left: 0; right: 0; height: 2px; background: #fff; bottom: 0; }
 .meter .band { position: absolute; left: -2px; right: -2px; opacity: .45; pointer-events: none; }
@@ -77,14 +78,28 @@ main { flex: 1; overflow: auto; padding: 8px; min-height: 0; }
 .meter .mlbl { position: absolute; font-size: 8px; color: var(--muted); left: 50%; transform: translateX(-50%); bottom: -1px; }
 .mscale { position: relative; width: 22px; margin: 10px 4px 10px 0; font-size: 9px; color: var(--muted); }
 .mscale span { position: absolute; right: 0; transform: translateY(50%); }
-.fader { position: relative; width: 46px; height: 100%; touch-action: none; cursor: ns-resize; }
-.fader .track { position: absolute; left: 50%; top: 10px; bottom: 10px; width: 6px; transform: translateX(-50%); background: #000; border: 1px solid var(--line); }
+.fm.msl .mscale { order: -1; margin: 10px 0 10px 4px; }
+.fm.msl .mscale span { right: auto; left: 0; }
+/* fader: dB scale on one side (22px), a desk-style cap over the track on the other (42px) */
+.fader { --cap: #7a2fe0; --capline: #ffffff; position: relative; width: 64px; height: 100%; touch-action: none; cursor: ns-resize; }
+.fader .track { position: absolute; left: 43px; top: 10px; bottom: 10px; width: 6px; transform: translateX(-50%); background: #000; border: 1px solid var(--line); box-shadow: inset 0 0 3px #000; }
 .fader .scale { position: absolute; inset: 10px 0; pointer-events: none; }
-.fader .tick { position: absolute; left: 0; right: 0; height: 1px; background: #2a2340; }
-.fader .tick span { position: absolute; left: 0; font-size: 9px; color: var(--muted); transform: translateY(-50%); }
-.fader .cap { position: absolute; left: 3px; right: 3px; height: 26px; margin-top: -13px; background: linear-gradient(#2c2045, #120c20); border: 1px solid var(--on); box-shadow: 0 2px 6px #000a; }
-.fader .cap::after { content: ''; position: absolute; left: 3px; right: 3px; top: 50%; height: 2px; background: #fff; }
-.fader.fine .cap { border-color: var(--amber); }
+.fader .tick { position: absolute; left: 22px; right: 0; height: 1px; background: #2a2340; }
+.fader .tick.u { background: #4a3d6a; }
+.fader .tick span { position: absolute; left: -22px; width: 19px; text-align: right; font-size: 9px; color: var(--muted); transform: translateY(-50%); }
+.fader.sr .track { left: 21px; }
+.fader.sr .tick { left: 0; right: 22px; }
+.fader.sr .tick span { left: auto; right: -22px; text-align: left; }
+.fader .cap { position: absolute; left: 22px; width: 42px; height: 36px; margin-top: -18px; z-index: 2;
+	background:
+		repeating-linear-gradient(180deg, transparent 0 3px, rgb(0 0 0 / .22) 3px 4px) 0 0 / 100% 40% no-repeat,
+		repeating-linear-gradient(180deg, transparent 0 3px, rgb(0 0 0 / .22) 3px 4px) 0 100% / 100% 40% no-repeat,
+		linear-gradient(180deg, color-mix(in srgb, var(--cap) 55%, #fff) 0%, var(--cap) 14%, color-mix(in srgb, var(--cap) 60%, #000) 48%, color-mix(in srgb, var(--cap) 60%, #000) 52%, var(--cap) 86%, color-mix(in srgb, var(--cap) 35%, #000) 100%);
+	border: 1px solid color-mix(in srgb, var(--cap) 50%, #000); border-top-color: color-mix(in srgb, var(--cap) 40%, #fff);
+	box-shadow: 0 6px 12px rgb(0 0 0 / .75), 0 2px 3px rgb(0 0 0 / .9), inset 0 1px 0 rgb(255 255 255 / .25); }
+.fader.sr .cap { left: 0; }
+.fader .cap::after { content: ''; position: absolute; left: 1px; right: 1px; top: 50%; height: 2px; margin-top: -1px; background: var(--capline); box-shadow: 0 0 5px var(--capline), 0 0 1px var(--capline); }
+.fader.fine .cap { outline: 2px solid var(--amber); outline-offset: 1px; }
 .readout { display: flex; justify-content: space-between; gap: 4px; font-size: 12px; }
 .rstate { font-size: 10px; padding: 0 4px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
 .rstate.riding { color: var(--val); } .rstate.limit { color: var(--amber); } .rstate.capturing, .rstate.calibrating { color: var(--on); }
@@ -152,12 +167,13 @@ main { flex: 1; overflow: auto; padding: 8px; min-height: 0; }
 .rows .meter .tgt { top: -3px; bottom: -3px; width: 2px; height: auto; left: auto; right: auto; }
 .rows .meter .mlbl, .rows .mscale { display: none; }
 .rows .fader { width: 100%; height: 40px; cursor: ew-resize; }
-.rows .fader .track { left: 10px; right: 10px; top: 50%; bottom: auto; height: 6px; width: auto; transform: translateY(-50%); }
+.rows .fader .track, .rows .fader.sr .track { left: 10px; right: 10px; top: 50%; bottom: auto; height: 6px; width: auto; transform: translateY(-50%); }
 .rows .fader .scale { inset: 0 10px; }
-.rows .fader .tick { top: 0; bottom: 0; width: 1px; height: auto; right: auto; }
-.rows .fader .tick span { top: auto; bottom: -2px; transform: translateX(-50%); }
-.rows .fader .cap { top: 3px; bottom: 3px; width: 22px; height: auto; margin: 0 0 0 -11px; right: auto; }
-.rows .fader .cap::after { top: 3px; bottom: 3px; left: 50%; width: 2px; height: auto; right: auto; }
+.rows .fader .tick, .rows .fader.sr .tick { top: 0; bottom: 0; width: 1px; height: auto; right: auto; }
+.rows .fader .tick span, .rows .fader.sr .tick span { top: auto; bottom: -2px; left: 0; right: auto; width: auto; transform: translateX(-50%); }
+.rows .fader .cap, .rows .fader.sr .cap { top: 2px; bottom: 2px; width: 30px; height: auto; margin: 0 0 0 -15px; right: auto;
+	background: linear-gradient(90deg, color-mix(in srgb, var(--cap) 55%, #fff) 0%, var(--cap) 14%, color-mix(in srgb, var(--cap) 60%, #000) 50%, var(--cap) 86%, color-mix(in srgb, var(--cap) 35%, #000) 100%); }
+.rows .fader .cap::after { top: 2px; bottom: 2px; left: 50%; width: 2px; height: auto; right: auto; margin: 0 0 0 -1px; }
 .rows .readout { flex-direction: column; min-width: 64px; }
 .rows .bottom { grid-template-columns: 1fr; width: 60px; }
 .rows .setcol { flex: 1 1 280px; border-top: 1px solid var(--line); }
@@ -165,6 +181,70 @@ main { flex: 1; overflow: auto; padding: 8px; min-height: 0; }
 .rows .adv { position: static; }
 .rows .advcol { flex: 1 1 100%; width: auto; border-left: 0; }
 .rows .grip { display: none; }
+
+/* joined sources: grouped blocks or free arrangement */
+.grp { --gc: var(--hi); display: flex; flex-direction: column; flex: 0 0 auto; min-height: 0; border-top: 3px solid var(--gc); background: color-mix(in srgb, var(--gc) 5%, transparent); }
+.ghead { display: flex; align-items: center; gap: 5px; padding: 3px 4px 3px 8px; font: 800 11px var(--head); letter-spacing: .08em; color: var(--fg); white-space: nowrap; flex: 0 0 auto; }
+.ghead .gname { overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+.ghead .gsub { font: 500 10px var(--body); color: var(--muted); letter-spacing: 0; overflow: hidden; text-overflow: ellipsis; }
+.ghead button { padding: 1px 6px; font-size: 10px; }
+.gbody { display: flex; gap: 8px; flex: 1; min-height: 0; padding: 0 4px 4px; }
+.grp.collapsed .gbody { display: none; }
+.rows .grp, .rows .gbody { flex-direction: column; }
+#strips.grouped { gap: 12px; }
+.strip.tagged { border-top: 3px solid var(--gc); }
+.strip .name .src { font: 600 9px var(--body); color: var(--ink); background: var(--gc); padding: 0 4px; letter-spacing: 0; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+.strip .name .drag { display: none; cursor: grab; color: var(--muted); touch-action: none; padding: 0 2px; }
+#strips.free .strip .name .drag { display: inline; }
+.strip.moving { opacity: .6; outline: 2px dashed var(--on); }
+.led.mini { width: 8px; height: 8px; }
+.swatch { width: 12px; height: 12px; display: inline-block; background: var(--gc); flex: none; }
+#sources { width: min(560px, calc(100vw - 16px)); max-height: min(640px, calc(100vh - 60px)); right: 10px; top: 50px; display: none; }
+#sources.open { display: flex; }
+.srow { display: flex; align-items: center; gap: 6px; padding: 5px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.srow .sinfo { flex: 1 1 180px; min-width: 0; }
+.srow .sinfo b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.srow .sinfo span { color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
+.srow input[type=color] { width: 28px; height: 22px; padding: 0; border: 1px solid var(--line); background: none; }
+.seg { display: inline-flex; }
+.seg button { border-right-width: 0; }
+.seg button:last-child { border-right-width: 1px; }
+/* recordings tab */
+.subtabs { display: flex; gap: 3px; flex-wrap: wrap; margin-bottom: 8px; }
+.subtabs button { padding: 4px 8px; font-size: 10px; }
+.rform .row input[type=text], .rform .row input[type=password], .rform .row input[type=url] { width: 62%; }
+.rform .row input[type=number] { width: 90px; }
+input[type=password], input[type=url] { background: var(--bg); border: 1px solid var(--line); padding: 3px 5px; min-width: 0; color: var(--fg); }
+.frow { border-bottom: 1px solid var(--line); padding: 6px 0; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+.frow .fname { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; }
+.frow .fmeta { color: var(--muted); font-size: 11px; white-space: nowrap; }
+.frow .fbtn { display: flex; gap: 3px; }
+.frow .fbtn button, .frow .fbtn a.btn { padding: 3px 7px; }
+.frow.busy .fname::after { content: ' ● recording'; color: var(--red); font-size: 10px; }
+a.btn { display: inline-block; text-decoration: none; background: var(--surface); border: 1px solid var(--line); color: var(--on); font: 700 11px var(--head); letter-spacing: .05em; text-transform: uppercase; }
+.preview video, .preview audio { width: 100%; max-height: 260px; background: #000; display: block; margin-bottom: 6px; }
+.rtable { max-height: 260px; overflow: auto; border: 1px solid var(--line); }
+.rtable table { border-collapse: collapse; width: 100%; font-size: 11px; }
+.rtable th { position: sticky; top: 0; background: var(--surface); color: var(--muted); text-align: left; font-weight: 600; }
+.rtable td, .rtable th { padding: 3px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.rtable tr.cur td { background: color-mix(in srgb, var(--hi) 35%, transparent); color: #fff; }
+.rtable tbody tr { cursor: pointer; }
+.rtable tbody tr:hover td { background: color-mix(in srgb, var(--hi) 15%, transparent); }
+.bigrow { font: 800 28px var(--head); color: var(--val); }
+.badge { display: inline-block; font: 700 10px var(--head); letter-spacing: .06em; padding: 1px 6px; border: 1px solid var(--line); color: var(--muted); text-transform: uppercase; }
+.badge.ok { border-color: var(--green); color: var(--green); } .badge.bad { border-color: var(--red); color: var(--red); } .badge.warn { border-color: var(--amber); color: var(--amber); } .badge.on { border-color: var(--on); color: var(--on); }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip { display: inline-flex; align-items: center; gap: 2px; border: 1px solid var(--line); padding: 2px 2px 2px 6px; background: var(--bg); font-size: 11px; }
+.chip button { padding: 0 4px; border: 0; background: none; font-size: 11px; }
+.chip.add { cursor: pointer; padding: 2px 6px; color: var(--on); }
+.chip.add:hover { border-color: var(--on); }
+.namepv { font-size: 14px; color: var(--val); padding: 6px; border: 1px dashed var(--line); overflow-wrap: anywhere; }
+.drop { border: 2px dashed var(--line); padding: 16px; text-align: center; color: var(--muted); }
+.drop.over { border-color: var(--on); color: var(--on); }
+.prog { height: 6px; background: #000; border: 1px solid var(--line); margin-top: 3px; }
+.prog > div { height: 100%; background: var(--hi); }
+.warnbox { border: 1px solid var(--amber); border-left: 4px solid var(--amber); padding: 8px; margin-bottom: 8px; color: var(--fg); }
+.warnbox b { color: var(--amber); }
 
 /* floating panels (never block the page) */
 .float { position: fixed; z-index: 20; background: var(--surface); border: 1px solid var(--hi); box-shadow: 0 10px 30px #000c; display: flex; flex-direction: column; }
@@ -216,6 +296,7 @@ main { flex: 1; overflow: auto; padding: 8px; min-height: 0; }
 		<span id="msg"></span>
 		<span style="flex:1"></span>
 		<button id="upd" class="on" style="display:none" data-tip="Ooh, something new: a newer version of this module or the device's software is out. Press for details and download links."></button>
+		<button id="bSources" data-tip="Sources: pull strips in from other OBS Audio and ATEM Audio pages on the network, and choose how they're laid out.">SOURCES <span id="srcCount"></span></button>
 		<button id="bTips" data-tip="Tip of the day. Go on, learn something.">TIPS</button>
 		<button id="bSettings" data-tip="Settings. Opens a floating panel you can drag out of the way; the strips keep working behind it.">⚙ SETTINGS</button>
 	</div>
@@ -231,11 +312,16 @@ main { flex: 1; overflow: auto; padding: 8px; min-height: 0; }
 		<button data-tab="buttons">Buttons</button>
 		<button data-tab="sections">Sections</button>
 		<button data-tab="inputs">Inputs</button>
-		<button data-tab="recording">Recording</button>
+		<button data-tab="recording">Record</button>
+		<button data-tab="files">Recordings</button>
 		<button data-tab="io">Export / import</button>
 		<button data-tab="about">About</button>
 	</div>
 	<div class="sbody" id="sbody"></div>
+</div>
+<div id="sources" class="float">
+	<div class="fhead2" id="srcHead"><span>SOURCES</span><button id="srcClose" data-tip="Close">✕</button></div>
+	<div class="sbody" id="srcBody"></div>
 </div>
 <div id="notices"></div>
 <div id="tip" class="float"><div class="fhead2"><span>TIP</span><button id="tipNext" data-tip="Another one">NEXT</button><button id="tipClose">✕</button></div><div class="tbody"><p id="tipText"></p><label class="chk"><input type="checkbox" id="tipOnOpen"> Show a tip when the page opens</label></div></div>
@@ -266,23 +352,12 @@ function flash(text) { const m = $('#msg'); m.textContent = text; clearTimeout(f
 function ps(name) { return (perStrip[name] ??= {}) }
 function savePs() { LSset('strip', perStrip) }
 
-async function cmd(c) {
-	try {
-		const r = await fetch('/cmd' + q(), { method: 'POST', body: JSON.stringify(c), headers: { 'Content-Type': 'application/json' } })
-		if (r.status === 401) return askPin()
-		const j = await r.json()
-		if (!j.ok) flash(j.error || 'That didn\'t work')
-		else if (j.message) flash(j.message)
-		return j
-	} catch { flash('Lost touch with the module') }
-}
-
 function askPin() {
 	const p = prompt('This page has a PIN. What is it?')
 	if (p === null) return
 	pin = p
 	localStorage.setItem(APP + '.pin', pin)
-	connect()
+	connectSource(HOME)
 }
 
 // ---- fader law (same as the core's law.ts) ----
@@ -309,10 +384,11 @@ function dbToPos(db) {
 }
 const fmt = (db, d = 1) => (db === null || db === undefined ? '-∞' : (db > 0 ? '+' : '') + Number(db).toFixed(d))
 function mFrac(db) { const p = S.store.page; if (db === null || db === undefined) return 0; return Math.max(0, Math.min(1, (db - p.meterFloorDb) / (p.meterTopDb - p.meterFloorDb))) }
-function zoneGradient(rows) {
+function zoneGradient(rows, pale) {
 	const p = S.store.page
 	const g = mFrac(p.greenToDb) * 100, y = mFrac(p.yellowToDb) * 100
-	return `linear-gradient(${rows ? 'to right' : 'to top'}, ${p.greenColour} 0%, ${p.greenColour} ${g}%, ${p.yellowColour} ${g}%, ${p.yellowColour} ${y}%, ${p.redColour} ${y}%, ${p.redColour} 100%)`
+	const c = (col) => (pale === undefined ? col : `color-mix(in srgb, ${col} ${Math.round(Math.max(0, Math.min(1, pale)) * 100)}%, #050507)`)
+	return `linear-gradient(${rows ? 'to right' : 'to top'}, ${c(p.greenColour)} 0%, ${c(p.greenColour)} ${g}%, ${c(p.yellowColour)} ${g}%, ${c(p.yellowColour)} ${y}%, ${c(p.redColour)} ${y}%, ${c(p.redColour)} 100%)`
 }
 
 // ---- tooltips (a setting can turn them off) ----
@@ -333,19 +409,6 @@ document.addEventListener('mouseover', (e) => {
 	}, 450)
 })
 document.addEventListener('pointerdown', () => { clearTimeout(ttTimer); tt.style.display = 'none' })
-
-// ---- live feed ----
-function connect() {
-	if (es) es.close()
-	es = new EventSource('/events' + q())
-	es.addEventListener('meta', (e) => { META = JSON.parse(e.data) })
-	es.addEventListener('state', (e) => { const first = !S; S = JSON.parse(e.data); render(); if (first) firstOpen() })
-	es.addEventListener('meters', (e) => drawMeters(JSON.parse(e.data)))
-	es.onerror = async () => {
-		$('#led').classList.remove('ok')
-		try { const r = await fetch('/events' + q(), { method: 'HEAD' }); if (r.status === 401) { es.close(); askPin() } } catch {}
-	}
-}
 
 setInterval(() => { $('#clock').textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }); tickNext() }, 1000)
 
@@ -380,7 +443,7 @@ function tickNext() {
 }
 $('#bPfl').onclick = () => cmd({ cmd: 'page', key: 'pflMode', value: S.store.page.pflMode === 'exclusive' ? 'additive' : 'exclusive' })
 $('#cLatch').onchange = (e) => cmd({ cmd: 'page', key: 'soloLatch', value: e.target.checked })
-$('#cMatch').onchange = (e) => { LSset('match', e.target.checked); if (e.target.checked) { const w = Math.max(...S.inputs.map((i) => ps(i.id).width || 340)); for (const i of S.inputs) ps(i.id).width = w; savePs(); render() } }
+$('#cMatch').onchange = (e) => { LSset('match', e.target.checked); if (e.target.checked) { const keys = [...strips.keys()]; const w = Math.max(340, ...keys.map((k) => ps(k).width || 340)); for (const k of keys) ps(k).width = w; savePs(); render() } }
 $('#bRec').onclick = () => (S.recording.active ? stopFlow() : cmd({ cmd: 'recordStart' }))
 $('#upd').onclick = () => openSettings('about')
 $('#bSettings').onclick = () => ($('#settings').classList.contains('open') ? $('#settings').classList.remove('open') : openSettings(tab))
@@ -460,6 +523,9 @@ const TIPS = [
 	'Hover over anything for a tooltip. Know it all already? Turn them off in Settings → Page.',
 	'With auto level moving the fader, a Grid fader latched to that input lets go each time. Ride the trim instead and you keep both.',
 	'The PRE meter is before the fader. POST is what goes out.',
+	'Got more than one rig? SOURCES pulls strips in from other OBS Audio and ATEM Audio pages on the network. Grouped by source, or drag them anywhere you like.',
+	'Recordings can be named from a spreadsheet: Settings → Recordings → Sheet source. Step to the next session with NEXT, or let the clock pick the row.',
+	'Recordings tab: play, download, rename or bin any recording, straight from the page.',
 ]
 const allTips = () => [...TIPS, ...((META && META.tips) || [])]
 let tipN = LS('tipN', 0)
@@ -521,102 +587,74 @@ function wireKnobs(root, onSet) {
 // ---- rendering ----
 function sectionMode(inp, sec) { return inp.sections[sec.id] || sec.mode }
 
-function render() {
-	if (!S || !META) return
-	renderHeader()
-	renderNotices()
-	const rows = S.store.page.layout === 'rows'
-	const box = $('#strips')
-	box.classList.toggle('rows', rows)
-	const list = S.inputs.filter((i) => !i.hidden)
-	$('#empty').style.display = list.length ? 'none' : ''
-	$('#empty').textContent = S.connected ? `No audio inputs on ${META.device.label}` : (S.deviceError || `Waiting for ${META.device.label}…`)
-	const names = new Set(list.map((i) => i.id))
-	for (const [n, s] of strips) if (!names.has(n)) { s.el.remove(); strips.delete(n) }
-	let prev = null
-	for (const inp of list) {
-		let s = strips.get(inp.id)
-		const st = ps(inp.id)
-		const layoutSig = JSON.stringify([rows, st.pre ?? S.store.page.showPre, st.post ?? S.store.page.showPost, !!st.pinned, inp.channels, inp.caps, grKinds(inp), S.store.page])
-		if (!s || s.layoutSig !== layoutSig) {
-			const el = buildStrip(inp, rows)
-			if (s) s.el.replaceWith(el)
-			s = { el, sig: '', layoutSig }
-			strips.set(inp.id, s)
-		}
-		if (prev ? prev.nextSibling !== s.el : box.firstChild !== s.el) box.insertBefore(s.el, prev ? prev.nextSibling : box.firstChild)
-		prev = s.el
-		if (!rows) s.el.style.width = (st.width || 340) + (st.pinned ? 260 : 0) + 'px'
-		updateStrip(s, inp)
-	}
-	if ($('#settings').classList.contains('open')) renderSettings(false)
-}
-
 /** Blocks on this input that report gain reduction, shown as GR meters */
-function grKinds(inp) { const gk = new Set(META.processing.filter((k) => k.gainReduction).map((k) => k.kind)); return inp.blocks.filter((b) => gk.has(b.kind)).map((b) => b.id) }
+function grKinds(X, inp) { const gk = new Set(X.META.processing.filter((k) => k.gainReduction).map((k) => k.kind)); return inp.blocks.filter((b) => gk.has(b.kind)).map((b) => b.id) }
 
-function buildStrip(inp, rows) {
-	const st = ps(inp.id)
-	const pre = !!inp.caps.preMeter && (st.pre ?? S.store.page.showPre), post = st.post ?? S.store.page.showPost
+function buildStrip(X, inp, rows) {
+	const st = ps(skey(X, inp.id))
+	const pre = !!inp.caps.preMeter && (st.pre ?? PG().showPre), post = st.post ?? PG().showPost
 	const el = document.createElement('div')
 	el.className = 'strip' + (st.pinned ? ' pinned' : '')
 	el.dataset.id = inp.id
+	el.dataset.key = skey(X, inp.id)
 	const meterHtml = (cls, label) => `<div class="meter ${cls}" data-tip="${cls === 'pre' ? 'PRE: what\'s coming in, before the fader (peaks)' : 'POST: the level after the fader, as recorded'}"><span class="mlbl">${label}</span>${Array.from({ length: Math.max(1, Math.min(inp.channels, 8)) }, () => `<div class="ch"><div class="bar"></div><div class="pk"></div></div>`).join('')}<div class="band"></div><div class="tgt"></div></div>`
 	el.innerHTML = `<div class="name"></div>
 		<div class="cols">
 			<div class="col fmcol">
 				<div class="tog">${!inp.caps.preMeter ? '' : `<button class="${pre ? 'on' : ''}" data-t="pre" data-tip="Shows the pre-fader meter on this strip">PRE</button>`}<button class="${post ? 'on' : ''}" data-t="post" data-tip="Shows the post-fader meter on this strip">POST</button><button class="${st.fine ? 'on' : ''}" data-t="fine" data-tip="Fine: small fader moves on this strip (two fingers do the same trick)">FINE</button></div>
-				<div class="fm"><div class="meters">${pre ? meterHtml('pre', 'PRE') : ''}${post ? meterHtml('post', 'POST') : ''}${grKinds(inp).map((b) => `<div class="meter gr" data-gr="${esc(b)}" data-tip="Gain reduction: ${esc(b)}"><span class="mlbl">GR</span><div class="ch"><div class="bar"></div></div></div>`).join('')}</div>${pre || post ? `<div class="mscale" data-tip="Meter scale (dB)">${[0, -6, -12, -18, -24, -36, -48].filter((d) => d <= S.store.page.meterTopDb && d > S.store.page.meterFloorDb).map((d) => `<span style="bottom:${mFrac(d) * 100}%">${d}</span>`).join('')}</div>` : ''}<div class="fader" data-tip="The fader. Drag to move; double tap for 0 dB."><div class="track"></div><div class="scale"></div><div class="cap"></div></div></div>
+				<div class="fm${PG().meterScaleSide === 'left' ? ' msl' : ''}"><div class="meters">${pre ? meterHtml('pre', 'PRE') : ''}${post ? meterHtml('post', 'POST') : ''}${grKinds(X, inp).map((b) => `<div class="meter gr" data-gr="${esc(b)}" data-tip="Gain reduction: ${esc(b)}"><span class="mlbl">GR</span><div class="ch"><div class="bar"></div></div></div>`).join('')}</div>${pre || post ? `<div class="mscale" data-tip="Meter scale (dB)">${[0, -6, -12, -18, -24, -36, -48].filter((d) => d <= PG().meterTopDb && d > PG().meterFloorDb).map((d) => `<span style="bottom:${mFrac(d) * 100}%">${d}</span>`).join('')}</div>` : ''}<div class="fader${PG().faderScaleSide === 'right' ? ' sr' : ''}" style="--cap:${esc(PG().capColour)};--capline:${esc(PG().capLineColour)}" data-tip="The fader. Drag to move; double tap for 0 dB."><div class="track"></div><div class="scale"></div><div class="cap"></div></div></div>
 				<div class="readout"><span class="val vol"></span><span class="rstate"></span><span class="val lvl" data-tip="The level auto level is listening to right now"></span></div>
-				<div class="bottom">${inp.caps.mute ? '<button class="mute" data-a="mute" data-tip="Mute: cuts this input from the output and the recording">MUTE</button>' : '<span></span>'}${inp.caps.monitor ? `<button class="pfl" data-a="pfl" data-tip="PFL: have a listen to this input on ${esc(META.device.label)}'s monitoring (headphones). The output and recording don't change.">PFL</button><button class="solo" data-a="solo" data-tip="Solo: hear only this input on monitoring while held (or until pressed again with Solo latch on). Never touches the output or the recording.">SOLO</button>` : ''}</div>
+				<div class="bottom">${inp.caps.mute ? '<button class="mute" data-a="mute" data-tip="Mute: cuts this input from the output and the recording">MUTE</button>' : '<span></span>'}${inp.caps.monitor ? `<button class="pfl" data-a="pfl" data-tip="PFL: have a listen to this input on ${esc(X.META.device.label)}'s monitoring (headphones). The output and recording don't change.">PFL</button><button class="solo" data-a="solo" data-tip="Solo: hear only this input on monitoring while held (or until pressed again with Solo latch on). Never touches the output or the recording.">SOLO</button>` : ''}</div>
 			</div>
 			<div class="col setcol"><div class="basic"></div><div class="sections"></div><div class="adv"></div></div>
 			<div class="col advcol"><div class="adv"></div></div>
 		</div><div class="grip" data-tip="Drag to make this strip wider or narrower"></div>`
 	for (const bar of $$('.meter.pre .bar, .meter.post .bar', el)) bar.style.background = zoneGradient(rows)
+	if (PG().meterPaleBack) for (const ch of $$('.meter.pre .ch, .meter.post .ch', el)) { ch.classList.add('pale'); ch.style.backgroundImage = zoneGradient(rows, PG().meterPaleStrength) }
 	const scale = $('.scale', el)
 	for (const db of [10, 5, 0, -5, -10, -20, -30, -40, -60]) {
-		if (db > S.store.page.faderTopDb) continue
+		if (db > PG().faderTopDb) continue
 		const p = dbToPos(db)
 		const t = document.createElement('div')
-		t.className = 'tick'
+		t.className = 'tick' + (db === 0 ? ' u' : '')
 		if (rows) t.style.left = p * 100 + '%'; else t.style.top = (1 - p) * 100 + '%'
 		t.innerHTML = `<span>${db > 0 ? '+' + db : db}</span>`
 		scale.appendChild(t)
 	}
-	attachFader($('.fader', el), inp.id, rows)
+	attachFader(X, $('.fader', el), inp.id, rows)
 	$$('.tog button', el).forEach((b) => b.onclick = () => {
-		const s = ps(inp.id), k = b.dataset.t
+		const s = ps(skey(X, inp.id)), k = b.dataset.t
 		if (k === 'fine') s.fine = !s.fine
-		else s[k] = !((s[k] ?? S.store.page[k === 'pre' ? 'showPre' : 'showPost']))
+		else s[k] = !((s[k] ?? PG()[k === 'pre' ? 'showPre' : 'showPost']))
 		savePs(); render()
 	})
 	const name = inp.id
-	const cur = () => S.inputs.find((i) => i.id === name)
-	if ($('.bottom [data-a=mute]', el)) $('.bottom [data-a=mute]', el).onclick = () => cmd({ cmd: 'mute', input: name, value: !cur().muted })
-	if ($('[data-a=pfl]', el)) $('[data-a=pfl]', el).onclick = () => cmd({ cmd: 'pfl', input: name, value: !cur().pfl })
+	const cur = () => X.S.inputs.find((i) => i.id === name)
+	if ($('.bottom [data-a=mute]', el)) $('.bottom [data-a=mute]', el).onclick = () => X.cmd({ cmd: 'mute', input: name, value: !cur().muted })
+	if ($('[data-a=pfl]', el)) $('[data-a=pfl]', el).onclick = () => X.cmd({ cmd: 'pfl', input: name, value: !cur().pfl })
 	const solo = $('[data-a=solo]', el) || document.createElement('button')
 	let holding = false
-	solo.addEventListener('pointerdown', (e) => { if (S.store.page.soloLatch) return; e.preventDefault(); holding = true; solo.setPointerCapture(e.pointerId); cmd({ cmd: 'solo', input: name, value: true }) })
-	const soloUp = () => { if (holding) { holding = false; cmd({ cmd: 'solo', input: name, value: false }) } }
+	solo.addEventListener('pointerdown', (e) => { if (PG().soloLatch) return; e.preventDefault(); holding = true; solo.setPointerCapture(e.pointerId); X.cmd({ cmd: 'solo', input: name, value: true }) })
+	const soloUp = () => { if (holding) { holding = false; X.cmd({ cmd: 'solo', input: name, value: false }) } }
 	solo.addEventListener('pointerup', soloUp)
 	solo.addEventListener('pointercancel', soloUp)
-	solo.addEventListener('click', () => { if (S.store.page.soloLatch) cmd({ cmd: 'solo', input: name, value: S.solo !== name }) })
+	solo.addEventListener('click', () => { if (PG().soloLatch) X.cmd({ cmd: 'solo', input: name, value: X.S.solo !== name }) })
 	el.addEventListener('click', (e) => {
 		const h = e.target.closest('.sec.collapsible h3')
 		if (!h) return
 		const sec = h.parentElement
 		sec.classList.toggle('collapsed')
-		collapsed[name + '/' + sec.dataset.id] = sec.classList.contains('collapsed')
+		collapsed[ckey(X, name) + '/' + sec.dataset.id] = sec.classList.contains('collapsed')
 		LSset('collapsed', collapsed)
 	})
 	const grip = $('.grip', el)
 	grip.addEventListener('pointerdown', (e) => {
 		e.preventDefault(); grip.classList.add('drag')
-		const x0 = e.clientX, w0 = el.offsetWidth - (ps(name).pinned ? 260 : 0)
+		const me = skey(X, name)
+		const x0 = e.clientX, w0 = el.offsetWidth - (ps(me).pinned ? 260 : 0)
 		const mv = (ev) => {
 			const w = Math.max(200, Math.min(1000, w0 + ev.clientX - x0))
-			const targets = LS('match', false) ? S.inputs.map((i) => i.id) : [name]
+			const targets = LS('match', false) ? [...strips.keys()] : [me]
 			for (const n of targets) { ps(n).width = w; const s = strips.get(n); if (s) s.el.style.width = w + (ps(n).pinned ? 260 : 0) + 'px' }
 		}
 		const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); grip.classList.remove('drag'); savePs() }
@@ -627,46 +665,47 @@ function buildStrip(inp, rows) {
 
 function editing(el) { const ae = document.activeElement; return !!ae && el.contains(ae) && ae.matches('input[type=text], input[type=number], input[type=time], input[type=date], select, textarea') }
 
-function updateStrip(s, inp) {
+function updateStrip(X, s, inp) {
 	const el = s.el
-	const rows = S.store.page.layout === 'rows'
+	const rows = PG().layout === 'rows'
 	const busy = editing(el) || el.querySelector('.knob.active')
-	const nameOf = (id) => (S.inputs.find((i) => i.id === id) || { name: id }).name
+	const nameOf = (id) => (X.S.inputs.find((i) => i.id === id) || { name: id }).name
 	const role = inp.caps.role ? inp.caps.role.toUpperCase() : ''
 	const tag = inp.onBackup ? 'ON BACKUP' : inp.backupFor ? `BACKUP OF ${nameOf(inp.backupFor)}` : role
-	const nameHtml = `<span class="nm" data-tip="${esc(inp.name)}">${esc(inp.name)}</span>${tag ? `<span class="tag">${esc(tag)}</span>` : ''}`
+	const srcTag = joined() && layoutMode() === 'free' ? `<span class="src" data-tip="From ${esc(X.name)}">${esc(X.name)}</span>` : ''
+	const nameHtml = `<span class="drag" data-tip="Drag to move this strip anywhere">⠿</span><span class="nm" data-tip="${esc(inp.name)}">${esc(inp.name)}</span>${tag ? `<span class="tag">${esc(tag)}</span>` : ''}${srcTag}`
 	if ($('.name', el).innerHTML !== nameHtml) $('.name', el).innerHTML = nameHtml
-	const sig = JSON.stringify([inp.blocks, inp.overrides, inp.sections, inp.settings, inp.routing, inp.balance, inp.delay, inp.mixOption, inp.monitor, inp.hasTrim, inp.trimDb, inp.target, inp.backupFor, inp.onBackup, S.store.sections, S.store.defaults, S.store.moduleCalibrateDb, S.inputs.map((i) => i.id + '\u0001' + i.name)])
+	const sig = JSON.stringify([inp.blocks, inp.overrides, inp.sections, inp.settings, inp.routing, inp.balance, inp.delay, inp.mixOption, inp.monitor, inp.hasTrim, inp.trimDb, inp.target, inp.backupFor, inp.onBackup, X.S.store.sections, X.S.store.defaults, X.S.store.moduleCalibrateDb, X.S.inputs.map((i) => i.id + '\u0001' + i.name)])
 	if (sig !== s.sig && !busy) {
 		s.sig = sig
-		$('.basic', el).innerHTML = basicHtml(inp)
-		$('.sections', el).innerHTML = S.store.sections
+		$('.basic', el).innerHTML = basicHtml(X, inp)
+		$('.sections', el).innerHTML = X.S.store.sections
 			.filter((sec) => sectionMode(inp, sec) !== 'hidden' && sec.controls.length)
 			.map((sec) => {
 				const mode = sectionMode(inp, sec)
-				const isCol = mode === 'collapsible' && (collapsed[inp.name + '/' + sec.id] ?? true)
+				const isCol = mode === 'collapsible' && (collapsed[ckey(X, inp.name) + '/' + sec.id] ?? true)
 				const pc = inp.caps.processing
-				const kinds = pc && pc.addable ? META.processing.filter((k) => sec.controls.includes(k.kind) && pc.kinds.includes(k.kind)) : []
+				const kinds = pc && pc.addable ? X.META.processing.filter((k) => sec.controls.includes(k.kind) && pc.kinds.includes(k.kind)) : []
 				const add = kinds.length ? `<select class="addf" data-a="fadd" data-tip="Add processing to this input"><option value="">+ Add…</option>${kinds.map((k) => `<option value="${k.kind}">${esc(k.label)}</option>`).join('')}</select>` : ''
-				const body = sec.controls.map((c) => control(inp, c)).join('') + add
+				const body = sec.controls.map((c) => control(X, inp, c)).join('') + add
 				return body ? `<div class="sec ${mode === 'collapsible' ? 'collapsible' : ''} ${isCol ? 'collapsed' : ''}" data-id="${esc(sec.id)}"><h3>${esc(sec.name)}</h3><div class="body">${body}</div></div>` : ''
 			}).join('')
-		const advHtml = advancedHtml(inp)
+		const advHtml = advancedHtml(X, inp)
 		for (const a of $$('.adv', el)) { const open = a.classList.contains('open'); a.innerHTML = advHtml; a.classList.toggle('open', open) }
-		wire(el, inp.id)
+		wire(X, el, inp.id)
 	}
-	if (!dragging.has(inp.id)) setCap(el, dbToPos(inp.volumeDb), rows)
+	if (!dragging.has(skey(X, inp.id))) setCap(el, dbToPos(inp.volumeDb), rows)
 	$('.vol', el).textContent = fmt(inp.volumeDb) + ' dB'
 	const rs = $('.rstate', el)
 	rs.className = 'rstate ' + inp.autoLevel
 	rs.textContent = inp.autoLevel === 'off' ? (inp.settings.autoLevelOn ? 'no target' : '') : inp.autoLevel
 	for (const b of $$('[data-a=mute]', el)) b.classList.toggle('on', inp.muted)
 	for (const b of $$('[data-a=pfl]', el)) b.classList.toggle('on', !!inp.pfl)
-	for (const b of $$('[data-a=solo]', el)) b.classList.toggle('on', S.solo === inp.id)
-	$('.fader', el).classList.toggle('fine', !!ps(inp.id).fine)
+	for (const b of $$('[data-a=solo]', el)) b.classList.toggle('on', X.S.solo === inp.id)
+	$('.fader', el).classList.toggle('fine', !!ps(skey(X, inp.id)).fine)
 	for (const t of $$('[data-live=state]', el)) t.textContent = inp.autoLevel
 	for (const t of $$('[data-live=target]', el)) t.textContent = inp.target === null ? 'none' : fmt(inp.target) + ' dB'
-	const p = S.store.page
+	const p = PG()
 	for (const m of $$('.meter.pre, .meter.post', el)) { $('.band', m).style.display = 'none'; $('.tgt', m).style.display = 'none' }
 	const meter = $(inp.settings.controlMode === 'trim' && inp.caps.trim ? '.meter.pre' : '.meter.post', el)
 	if (meter && inp.target !== null) {
@@ -687,16 +726,16 @@ function setCap(el, pos, rows) {
 }
 
 // basic auto gain, at the top of the channel settings
-function basicHtml(inp) {
+function basicHtml(X, inp) {
 	const on = inp.settings.autoLevelOn
-	return `<div class="btns"><button class="${on ? 'on' : ''}" data-a="autolevel" data-tip="Auto level on/off: keeps this input near its target by moving the ${inp.settings.controlMode === 'trim' && inp.caps.trim ? 'trim' : 'fader'} for you, so you don\'t have to">AUTO LEVEL ${on ? 'ON' : 'OFF'}</button><button data-a="capture" data-tip="This level please: sounds right? This grabs the level now as the target">THIS LEVEL</button><button data-a="cal" data-l="input" data-tip="Calibrate this input once, to its own level (${fmt(inp.settings.calibrateDb, 1)} dB)">CAL ${fmt(inp.settings.calibrateDb, 0)}</button><button data-a="cal" data-l="module" data-tip="Calibrate once, to the module level (${fmt(S.store.moduleCalibrateDb, 1)} dB)">CAL ${fmt(S.store.moduleCalibrateDb, 0)}</button></div>
+	return `<div class="btns"><button class="${on ? 'on' : ''}" data-a="autolevel" data-tip="Auto level on/off: keeps this input near its target by moving the ${inp.settings.controlMode === 'trim' && inp.caps.trim ? 'trim' : 'fader'} for you, so you don\'t have to">AUTO LEVEL ${on ? 'ON' : 'OFF'}</button><button data-a="capture" data-tip="This level please: sounds right? This grabs the level now as the target">THIS LEVEL</button><button data-a="cal" data-l="input" data-tip="Calibrate this input once, to its own level (${fmt(inp.settings.calibrateDb, 1)} dB)">CAL ${fmt(inp.settings.calibrateDb, 0)}</button><button data-a="cal" data-l="module" data-tip="Calibrate once, to the module level (${fmt(X.S.store.moduleCalibrateDb, 1)} dB)">CAL ${fmt(X.S.store.moduleCalibrateDb, 0)}</button></div>
 		<div class="stat"><span class="lbl">Target</span><span class="val" data-live="target" data-tip="The level auto level holds. Click to type your own." style="cursor:text">${inp.target === null ? 'none' : fmt(inp.target) + ' dB'}</span></div>
-		<div class="stat" data-tip="${esc(META.inputFields.bandDb.help)}"><span class="lbl">Leave alone within ±</span><span style="white-space:nowrap"><input type="number" data-a="band" value="${inp.settings.bandDb}" min="0" max="30" step="0.5" style="width:56px"> dB</span></div>
+		<div class="stat" data-tip="${esc(X.META.inputFields.bandDb.help)}"><span class="lbl">Leave alone within ±</span><span style="white-space:nowrap"><input type="number" data-a="band" value="${inp.settings.bandDb}" min="0" max="30" step="0.5" style="width:56px"> dB</span></div>
 		<div class="stat"><span class="lbl">Status</span><span class="val" data-live="state">${inp.autoLevel}</span></div>
 		<button data-a="adv" data-tip="Shows every auto gain and backup setting for this input. All the knobs.">SHOW ADVANCED ▸</button>`
 }
 
-function control(inp, c) {
+function control(X, inp, c) {
 	const k = inp.caps
 	switch (c) {
 		case 'mute': return k.mute ? `<div class="btns"><button class="mute ${inp.muted ? 'on' : ''}" data-a="mute" data-tip="Mute: cuts this input from the output and recording">${inp.muted ? 'MUTED' : 'MUTE'}</button></div>` : ''
@@ -708,12 +747,12 @@ function control(inp, c) {
 		case 'routing': return k.routing ? `<div class="tracks" style="grid-template-columns: repeat(${Math.max(1, Math.min(8, k.routing.targets.length))}, 1fr)">${k.routing.targets.map((t) => `<button class="${inp.routing[t.id] ? 'on' : ''}" data-a="route" data-t="${esc(t.id)}" data-tip="${esc(k.routing.label)}: ${esc(t.label)}">${esc(t.label)}</button>`).join('')}</div>` : ''
 		case 'backup': {
 			if (k.role) return ''
-			const others = S.inputs.filter((i) => i.id !== inp.id && !i.caps.role)
+			const others = X.S.inputs.filter((i) => i.id !== inp.id && !i.caps.role)
 			const sw = inp.backupFor ? `<button class="${inp.onBackup ? 'on' : ''}" data-a="bswitch" data-tip="Switch between the main and this backup, with a crossfade">${inp.onBackup ? 'ON BACKUP: BACK TO MAIN' : 'SWITCH TO BACKUP'}</button>` : ''
-			return `<div class="row" data-tip="${esc(META.inputFields.backupOf.help)}"><span class="lbl">Backup for</span><select data-a="sset" data-key="backupOf"><option value="">none</option>${others.map((o) => `<option value="${esc(o.id)}" ${inp.settings.backupOf === o.id ? 'selected' : ''}>${esc(o.name)}</option>`).join('')}</select></div>${sw}`
+			return `<div class="row" data-tip="${esc(X.META.inputFields.backupOf.help)}"><span class="lbl">Backup for</span><select data-a="sset" data-key="backupOf"><option value="">none</option>${others.map((o) => `<option value="${esc(o.id)}" ${inp.settings.backupOf === o.id ? 'selected' : ''}>${esc(o.name)}</option>`).join('')}</select></div>${sw}`
 		}
 		default: {
-			const kind = META.processing.find((x) => x.kind === c)
+			const kind = X.META.processing.find((x) => x.kind === c)
 			if (!kind || !k.processing || !k.processing.kinds.includes(c)) return ''
 			return inp.blocks.filter((b) => b.kind === c && !b.isTrim).map((b) => blockBox(b, kind, k.processing.addable)).join('')
 		}
@@ -734,52 +773,53 @@ function blockBox(f, kind, removable) {
 	return `<div class="filter ${f.enabled ? '' : 'off'}"><div class="fhead"><span data-tip="${name}">${name}</span><button class="small ${f.enabled ? 'on' : ''}" data-a="bon" data-b="${bid}" data-tip="Switches this on or off">${f.enabled ? 'ON' : 'OFF'}</button>${removable ? `<button class="small" data-a="bdel" data-b="${bid}" data-tip="Removes this from the input">✕</button>` : ''}</div>${others}<div class="knobs">${knobs}</div></div>`
 }
 
-function fieldInput(key, field, value, attrs) {
+function fieldInput(X, key, field, value, attrs) {
 	if (field.type === 'bool') return `<select ${attrs}><option value="true" ${value ? 'selected' : ''}>On</option><option value="false" ${!value ? 'selected' : ''}>Off</option></select>`
 	if (field.type === 'choice') return `<select ${attrs}>${field.choices.map((c) => `<option value="${c.id}" ${value === c.id ? 'selected' : ''}>${esc(c.label)}</option>`).join('')}</select>`
-	if (field.type === 'input') return `<select ${attrs}><option value="">none</option>${(S.inputs || []).map((i) => `<option value="${esc(i.id)}" ${value === i.id ? 'selected' : ''}>${esc(i.name)}</option>`).join('')}</select>`
+	if (field.type === 'input') return `<select ${attrs}><option value="">none</option>${(X.S.inputs || []).map((i) => `<option value="${esc(i.id)}" ${value === i.id ? 'selected' : ''}>${esc(i.name)}</option>`).join('')}</select>`
 	if (field.type === 'text') return `<input type="text" ${attrs} value="${esc(value)}">`
 	return `<input type="number" ${attrs} value="${value}" min="${field.min}" max="${field.max}" step="${field.step}">`
 }
 
 const GROUP_TITLES = { autolevel: 'Auto level', capture: 'This level please', limits: 'Limits', quiet: 'When it goes quiet', calibrate: 'Calibrate', backup: 'Backup feed' }
 /** Setting groups in order: the core's, then any the device adds */
-function groups() { const g = Object.keys(GROUP_TITLES); for (const f of Object.values(META.inputFields)) if (!g.includes(f.group)) g.push(f.group); return g.map((id) => [id, GROUP_TITLES[id] || id]) }
-function advancedHtml(inp) {
-	const body = groups().filter(([g]) => !(inp.caps.role && g === 'backup')).map(([g, title]) => `<h4>${title}</h4>` + Object.entries(META.inputFields).filter(([, f]) => f.group === g).map(([k, f]) => {
+function groups(X) { const g = Object.keys(GROUP_TITLES); for (const f of Object.values(X.META.inputFields)) if (!g.includes(f.group)) g.push(f.group); return g.map((id) => [id, GROUP_TITLES[id] || id]) }
+function advancedHtml(X, inp) {
+	const body = groups(X).filter(([g]) => !(inp.caps.role && g === 'backup')).map(([g, title]) => `<h4>${title}</h4>` + Object.entries(X.META.inputFields).filter(([, f]) => f.group === g).map(([k, f]) => {
 		const ovr = k in inp.overrides
-		return `<div class="row" data-tip="${esc(f.help || '')}"><span class="lbl ${ovr ? 'ovr' : ''}">${esc(f.label)}${f.unit ? ' (' + esc(f.unit) + ')' : ''}</span>${ovr ? `<button class="reset" data-a="sreset" data-key="${k}" data-tip="Changed for this input. Press to put it back to the default.">↺</button>` : ''}${fieldInput(k, f, inp.settings[k], `data-a="sset" data-key="${k}"`)}</div>`
+		return `<div class="row" data-tip="${esc(f.help || '')}"><span class="lbl ${ovr ? 'ovr' : ''}">${esc(f.label)}${f.unit ? ' (' + esc(f.unit) + ')' : ''}</span>${ovr ? `<button class="reset" data-a="sreset" data-key="${k}" data-tip="Changed for this input. Press to put it back to the default.">↺</button>` : ''}${fieldInput(X, k, f, inp.settings[k], `data-a="sset" data-key="${k}"`)}</div>`
 	}).join('')).join('')
-	return `<div class="ahead"><b>AUTO GAIN · ${esc(inp.name)}</b><button class="small" data-a="pin" data-tip="Pin: keeps these settings in their own column instead of over the channel settings">${ps(inp.id).pinned ? 'UNPIN' : 'PIN'}</button><button class="small" data-a="advclose" data-tip="Close">✕</button></div><div class="abody">${body}<p class="help">Purple means changed for this input; ↺ puts it back to the default (Settings → Auto gain defaults).</p></div>`
+	return `<div class="ahead"><b>AUTO GAIN · ${esc(inp.name)}</b><button class="small" data-a="pin" data-tip="Pin: keeps these settings in their own column instead of over the channel settings">${ps(skey(X, inp.id)).pinned ? 'UNPIN' : 'PIN'}</button><button class="small" data-a="advclose" data-tip="Close">✕</button></div><div class="abody">${body}<p class="help">Purple means changed for this input; ↺ puts it back to the default (Settings → Auto gain defaults).</p></div>`
 }
 
-function wire(el, name) {
+function wire(X, el, name) {
+	const me = skey(X, name)
 	const on = (sel, ev, fn) => $$(sel, el).forEach((x) => x.addEventListener(ev, (e) => fn(x, e)))
-	const inp = () => S.inputs.find((i) => i.id === name)
-	on('.sections [data-a=mute]', 'click', () => cmd({ cmd: 'mute', input: name, value: !inp().muted }))
-	on('[data-a=monitor]', 'change', (x) => cmd({ cmd: 'monitor', input: name, value: x.value }))
-	on('[data-a=mixOption]', 'change', (x) => cmd({ cmd: 'mixOption', input: name, value: x.value }))
-	on('[data-a=delay]', 'change', (x) => cmd({ cmd: 'delay', input: name, value: +x.value }))
-	on('[data-a=route]', 'click', (x) => cmd({ cmd: 'routing', input: name, target: x.dataset.t, value: !inp().routing[x.dataset.t] }))
-	on('[data-a=autolevel]', 'click', () => cmd({ cmd: 'autoLevel', input: name, value: !inp().settings.autoLevelOn }))
-	on('[data-a=capture]', 'click', () => cmd({ cmd: 'capture', input: name }))
-	on('[data-a=cal]', 'click', (x) => cmd({ cmd: 'calibrate', input: name, level: x.dataset.l }))
-	on('[data-a=band]', 'change', (x) => cmd({ cmd: 'inputSetting', input: name, key: 'bandDb', value: x.value }))
-	on('[data-live=target]', 'click', () => { const t = prompt('Target level (dB), blank to clear', inp().target ?? ''); if (t !== null) cmd({ cmd: 'setTarget', input: name, value: t }) })
-	on('[data-a=bswitch]', 'click', () => cmd({ cmd: 'backupSwitch', input: name, to: inp().onBackup ? 'main' : 'backup' }))
-	on('[data-a=fadd]', 'change', (x) => { if (x.value) cmd({ cmd: 'blockAdd', input: name, kind: x.value }); x.value = '' })
-	on('[data-a=bdel]', 'click', (x) => { if (confirm(`Remove ${x.dataset.b} from this input?`)) cmd({ cmd: 'blockRemove', input: name, block: x.dataset.b }) })
-	on('[data-a=bon]', 'click', (x) => cmd({ cmd: 'blockEnable', input: name, block: x.dataset.b, value: !x.classList.contains('on') }))
-	on('[data-a=bset]', 'change', (x) => cmd({ cmd: 'blockSet', input: name, block: x.dataset.b, key: x.dataset.key, value: x.dataset.bool ? x.value === 'true' : x.value }))
-	on('[data-a=sset]', 'change', (x) => cmd({ cmd: 'inputSetting', input: name, key: x.dataset.key, value: x.value }))
-	on('[data-a=sreset]', 'click', (x) => cmd({ cmd: 'inputSetting', input: name, key: x.dataset.key, value: null }))
-	on('[data-a=adv]', 'click', () => { if (!ps(name).pinned) $('.setcol .adv', el).classList.add('open') })
-	on('[data-a=advclose]', 'click', () => { if (ps(name).pinned) { ps(name).pinned = false; savePs(); render() } else $$('.adv', el).forEach((a) => a.classList.remove('open')) })
-	on('[data-a=pin]', 'click', () => { ps(name).pinned = !ps(name).pinned; savePs(); render() })
+	const inp = () => X.S.inputs.find((i) => i.id === name)
+	on('.sections [data-a=mute]', 'click', () => X.cmd({ cmd: 'mute', input: name, value: !inp().muted }))
+	on('[data-a=monitor]', 'change', (x) => X.cmd({ cmd: 'monitor', input: name, value: x.value }))
+	on('[data-a=mixOption]', 'change', (x) => X.cmd({ cmd: 'mixOption', input: name, value: x.value }))
+	on('[data-a=delay]', 'change', (x) => X.cmd({ cmd: 'delay', input: name, value: +x.value }))
+	on('[data-a=route]', 'click', (x) => X.cmd({ cmd: 'routing', input: name, target: x.dataset.t, value: !inp().routing[x.dataset.t] }))
+	on('[data-a=autolevel]', 'click', () => X.cmd({ cmd: 'autoLevel', input: name, value: !inp().settings.autoLevelOn }))
+	on('[data-a=capture]', 'click', () => X.cmd({ cmd: 'capture', input: name }))
+	on('[data-a=cal]', 'click', (x) => X.cmd({ cmd: 'calibrate', input: name, level: x.dataset.l }))
+	on('[data-a=band]', 'change', (x) => X.cmd({ cmd: 'inputSetting', input: name, key: 'bandDb', value: x.value }))
+	on('[data-live=target]', 'click', () => { const t = prompt('Target level (dB), blank to clear', inp().target ?? ''); if (t !== null) X.cmd({ cmd: 'setTarget', input: name, value: t }) })
+	on('[data-a=bswitch]', 'click', () => X.cmd({ cmd: 'backupSwitch', input: name, to: inp().onBackup ? 'main' : 'backup' }))
+	on('[data-a=fadd]', 'change', (x) => { if (x.value) X.cmd({ cmd: 'blockAdd', input: name, kind: x.value }); x.value = '' })
+	on('[data-a=bdel]', 'click', (x) => { if (confirm(`Remove ${x.dataset.b} from this input?`)) X.cmd({ cmd: 'blockRemove', input: name, block: x.dataset.b }) })
+	on('[data-a=bon]', 'click', (x) => X.cmd({ cmd: 'blockEnable', input: name, block: x.dataset.b, value: !x.classList.contains('on') }))
+	on('[data-a=bset]', 'change', (x) => X.cmd({ cmd: 'blockSet', input: name, block: x.dataset.b, key: x.dataset.key, value: x.dataset.bool ? x.value === 'true' : x.value }))
+	on('[data-a=sset]', 'change', (x) => X.cmd({ cmd: 'inputSetting', input: name, key: x.dataset.key, value: x.value }))
+	on('[data-a=sreset]', 'click', (x) => X.cmd({ cmd: 'inputSetting', input: name, key: x.dataset.key, value: null }))
+	on('[data-a=adv]', 'click', () => { if (!ps(me).pinned) $('.setcol .adv', el).classList.add('open') })
+	on('[data-a=advclose]', 'click', () => { if (ps(me).pinned) { ps(me).pinned = false; savePs(); render() } else $$('.adv', el).forEach((a) => a.classList.remove('open')) })
+	on('[data-a=pin]', 'click', () => { ps(me).pinned = !ps(me).pinned; savePs(); render() })
 	wireKnobs(el, (key, v) => {
-		if (key === 'balance') cmd({ cmd: 'balance', input: name, value: (v + 100) / 200 })
-		else if (key === 'trim') cmd({ cmd: 'trim', input: name, value: v })
-		else { const [b, k] = key.split('\u0001'); cmd({ cmd: 'blockSet', input: name, block: b, key: k, value: v }) }
+		if (key === 'balance') X.cmd({ cmd: 'balance', input: name, value: (v + 100) / 200 })
+		else if (key === 'trim') X.cmd({ cmd: 'trim', input: name, value: v })
+		else { const [b, k] = key.split('\u0001'); X.cmd({ cmd: 'blockSet', input: name, block: b, key: k, value: v }) }
 	})
 }
 
@@ -794,10 +834,11 @@ function throttle(fn, ms = 40) {
 }
 
 // ---- the fader ----
-function attachFader(f, name, rows) {
+function attachFader(X, f, name, rows) {
+	const me = skey(X, name)
 	const pointers = new Map()
 	let startPos = 0, startCoord = 0, lastTap = 0, moved = false
-	const send = throttle((db) => cmd({ cmd: 'volume', input: name, db }), 33)
+	const send = throttle((db) => X.cmd({ cmd: 'volume', input: name, db }), 33)
 	const coord = (e) => (rows ? e.clientX : -e.clientY)
 	const len = () => (rows ? f.clientWidth : f.clientHeight) - 20
 	const strip = () => f.closest('.strip')
@@ -806,28 +847,28 @@ function attachFader(f, name, rows) {
 		f.setPointerCapture(e.pointerId)
 		pointers.set(e.pointerId, coord(e))
 		if (pointers.size > 1) { f.classList.add('fine'); return }
-		const inp = S.inputs.find((i) => i.id === name)
+		const inp = X.S.inputs.find((i) => i.id === name)
 		const now = Date.now()
-		if (S.store.page.doubleTapUnity && now - lastTap < 300) {
+		if (PG().doubleTapUnity && now - lastTap < 300) {
 			lastTap = 0
 			setCap(strip(), dbToPos(0), rows)
-			cmd({ cmd: 'volume', input: name, db: 0 })
+			X.cmd({ cmd: 'volume', input: name, db: 0 })
 			return
 		}
 		lastTap = now
 		moved = false
-		dragging.add(name)
+		dragging.add(me)
 		startPos = dbToPos(inp.volumeDb)
 		startCoord = coord(e)
-		cmd({ cmd: 'touch', input: name, value: true })
+		X.cmd({ cmd: 'touch', input: name, value: true })
 	})
 	f.addEventListener('pointermove', (e) => {
-		if (!pointers.has(e.pointerId) || !dragging.has(name)) return
+		if (!pointers.has(e.pointerId) || !dragging.has(me)) return
 		const c = coord(e)
-		const isFine = !!ps(name).fine || pointers.size > 1
+		const isFine = !!ps(me).fine || pointers.size > 1
 		f.classList.toggle('fine', isFine)
 		if (Math.abs(c - startCoord) > 3) moved = true
-		const pos = Math.max(0, Math.min(1, startPos + ((c - startCoord) / len()) * (isFine ? S.store.page.fineRatio : 1)))
+		const pos = Math.max(0, Math.min(1, startPos + ((c - startCoord) / len()) * (isFine ? PG().fineRatio : 1)))
 		startPos = pos
 		startCoord = c
 		setCap(strip(), pos, rows)
@@ -837,8 +878,8 @@ function attachFader(f, name, rows) {
 	const end = (e) => {
 		pointers.delete(e.pointerId)
 		if (pointers.size) return
-		f.classList.toggle('fine', !!ps(name).fine)
-		if (dragging.has(name)) { dragging.delete(name); cmd({ cmd: 'touch', input: name, value: false }) }
+		f.classList.toggle('fine', !!ps(me).fine)
+		if (dragging.has(me)) { dragging.delete(me); X.cmd({ cmd: 'touch', input: name, value: false }) }
 		if (moved) lastTap = 0
 	}
 	f.addEventListener('pointerup', end)
@@ -846,16 +887,18 @@ function attachFader(f, name, rows) {
 }
 
 // ---- meters ----
-function drawMeters(frame) {
-	if (!S) return
-	const p = S.store.page
+function drawMeters(X, frame) {
+	if (!X.S || !PG()) return
+	const p = PG()
 	const now = Date.now()
 	const rows = p.layout === 'rows'
-	for (const [name, s] of strips) {
+	for (const [key, s] of strips) {
+		if (s.X !== X) continue
+		const name = s.id
 		const m = frame[name]
 		if (!m) continue
 		const [post, pre, level, , gr] = m
-		const pk = (peaks[name] ??= { post: [], pre: [] })
+		const pk = (peaks[key] ??= { post: [], pre: [] })
 		const draw = (cls, vals, hold) => {
 			const meter = $('.meter.' + cls, s.el)
 			if (!meter) return
@@ -887,18 +930,714 @@ function drawMeters(frame) {
 	}
 }
 
+
+// ---- sources: this page's own connection, plus any joined from other pages ----
+// Each source is one connection's web server (OBS Audio, ATEM Audio...: same API). The page opens each one's live
+// feed directly (CORS), and every control on a strip goes to the strip's own source.
+const COLOURS = ['#7a2fe0', '#22b5c9', '#e0a02f', '#3fbf6a', '#e0507a', '#8a8fff', '#c96f22', '#5ad1a6']
+const pins = LS('pins', {}) // source address -> PIN (forgotten as soon as it's turned down)
+let srcCfg = LS('sources', []) // [{url, colour, on, manual, name}]
+let groupOrder = LS('groupOrder', [])
+const groupCollapsed = LS('groupCollapsed', {})
+let freeOrder = LS('freeOrder', [])
+const groupEls = new Map()
+const sources = new Map() // key -> source
+let movingStrip = null
+let peerList = { peers: [], finder: true }
+
+function normUrl(t) {
+	let u = String(t || '').trim()
+	if (!u) return ''
+	if (!/^https?:\/\//i.test(u)) u = 'http://' + u
+	try { const x = new URL(u); return `${x.protocol}//${x.host}` } catch { return '' }
+}
+const PG = () => (HOME.S ? HOME.S.store.page : null)
+const layoutMode = () => LS('joinLayout', 'grouped')
+const joined = () => [...sources.values()].some((x) => !x.home)
+const skey = (X, id) => (X.home ? id : X.key + '|' + id)
+const ckey = (X, name) => (X.home ? name : X.key + '|' + name)
+function saveSources() { LSset('sources', srcCfg) }
+
+function makeSource(cfg, home) {
+	const X = { home, cfg, key: home ? 'home' : cfg.url, base: home ? '' : cfg.url, S: null, META: null, info: null, es: null, status: 'connecting', error: '', asking: false }
+	X.pin = () => (home ? pin : pins[cfg.url] || '')
+	X.q = (more = '') => { const p = X.pin(); const parts = [p ? 'pin=' + encodeURIComponent(p) : '', more].filter(Boolean); return parts.length ? '?' + parts.join('&') : '' }
+	X.hdr = (extra = {}) => (X.pin() ? { ...extra, 'X-Rebel-Pin': X.pin() } : extra)
+	Object.defineProperty(X, 'name', { get: () => (X.info && X.info.name) || cfg.name || (home ? '%APP_NAME%' : cfg.url.replace(/^https?:\/\//, '')) })
+	Object.defineProperty(X, 'colour', { get: () => cfg.colour || COLOURS[0] })
+	X.cmd = async (c) => {
+		try {
+			const r = await fetch(X.base + '/cmd', { method: 'POST', body: JSON.stringify(c), headers: X.hdr({ 'Content-Type': 'application/json' }) })
+			if (r.status === 401) return pinRejected(X)
+			const j = await r.json()
+			if (!j.ok) flash((home ? '' : X.name + ': ') + (j.error || "That didn't work"))
+			else if (j.message) flash(j.message)
+			return j
+		} catch { flash(home ? 'Lost touch with the module' : `Lost touch with ${X.name}`) }
+	}
+	X.get = async (path) => {
+		const r = await fetch(X.base + path, { headers: X.hdr(), cache: 'no-store' })
+		if (r.status === 401) { pinRejected(X); throw new Error('pin') }
+		return r.json()
+	}
+	return X
+}
+
+function pinRejected(X) {
+	if (X.home) return askPin()
+	if (pins[X.cfg.url]) { delete pins[X.cfg.url]; LSset('pins', pins); X.error = "That PIN didn't work" }
+	X.status = 'pin'
+	if (X.es) { X.es.close(); X.es = null }
+	render()
+	askSourcePin(X)
+}
+
+function askSourcePin(X) {
+	if (X.asking) return
+	X.asking = true
+	dialog('PIN NEEDED', `<h3>${esc(X.name)} has a PIN</h3><p class="help">${X.error ? esc(X.error) + '. ' : ''}Pop it in once and this browser remembers it (until it changes).</p>
+		<input type="password" id="spin" autocomplete="off" style="width:100%"><div class="btns"><button class="primary" id="spinOk">Join</button><button id="spinNo">Not now</button></div>`, (b) => {
+		const done = () => { X.asking = false; closeDialog() }
+		$('#spinNo', b).onclick = done
+		$('#spin', b).focus()
+		const ok = () => { const v = $('#spin', b).value; if (!v) return; pins[X.cfg.url] = v; LSset('pins', pins); X.error = ''; done(); connectSource(X) }
+		$('#spinOk', b).onclick = ok
+		$('#spin', b).onkeydown = (e) => { if (e.key === 'Enter') ok() }
+	})
+	$('#dlgX').onclick = () => { X.asking = false; closeDialog(); $('#dlgX').onclick = closeDialog }
+}
+
+async function connectSource(X) {
+	if (X.es) X.es.close()
+	X.es = null
+	X.status = 'connecting'
+	if (!X.home) {
+		try {
+			const r = await fetch(X.base + '/api/info', { cache: 'no-store' })
+			X.info = await r.json()
+			if (HOME.info && X.info.id === HOME.info.id) { X.status = 'self'; X.error = "That's this page"; render(); return }
+			if (X.info.name && X.cfg.name !== X.info.name) { X.cfg.name = X.info.name; saveSources() }
+		} catch { X.status = 'down'; X.error = "Can't reach it"; render(); setTimeout(() => sources.has(X.key) && !X.es && connectSource(X), 8000); return }
+		if (X.info.pin && !X.pin()) { X.status = 'pin'; render(); askSourcePin(X); return }
+	}
+	const es = new EventSource(X.base + '/events' + X.q())
+	X.es = es
+	es.addEventListener('meta', (e) => { X.META = JSON.parse(e.data); if (X.home) META = X.META })
+	es.addEventListener('state', (e) => {
+		const first = !X.S
+		X.S = JSON.parse(e.data)
+		X.status = 'ok'
+		X.error = ''
+		if (X.home) { S = X.S; if (first) firstOpen() }
+		render()
+		recStateChanged(X)
+	})
+	es.addEventListener('meters', (e) => drawMeters(X, JSON.parse(e.data)))
+	es.onerror = async () => {
+		if (X.home) $('#led').classList.remove('ok')
+		X.status = 'connecting'
+		try { const r = await fetch(X.base + '/api/peers', { headers: X.hdr(), cache: 'no-store' }); if (r.status === 401) { es.close(); pinRejected(X) } } catch { X.status = 'down'; X.error = 'Lost touch' }
+		if (!X.home) renderGroups()
+	}
+}
+
+const HOME = makeSource({ url: '' }, true)
+sources.set('home', HOME)
+function connect() { connectSource(HOME) }
+function cmd(c) { return HOME.cmd(c) }
+async function loadInfo() {
+	try {
+		HOME.info = await (await fetch('/api/info', { cache: 'no-store' })).json()
+		HOME.cfg.colour = LS('homeColour', COLOURS[0])
+	} catch {}
+	for (const c of srcCfg) if (c.on) addSource(c)
+	render()
+}
+
+function addSource(c) {
+	if (sources.has(c.url)) return sources.get(c.url)
+	const X = makeSource(c, false)
+	sources.set(c.url, X)
+	connectSource(X)
+	return X
+}
+function dropSource(url) {
+	const X = sources.get(url)
+	if (!X) return
+	if (X.es) X.es.close()
+	sources.delete(url)
+	for (const [k, s] of strips) if (s.X === X) { s.el.remove(); strips.delete(k) }
+	const g = groupEls.get(url)
+	if (g) { g.remove(); groupEls.delete(url) }
+	render()
+}
+function nextColour() { const used = new Set([HOME.colour, ...srcCfg.map((c) => c.colour)]); return COLOURS.find((c) => !used.has(c)) || COLOURS[(srcCfg.length + 1) % COLOURS.length] }
+function joinUrl(url, name, manual) {
+	url = normUrl(url)
+	if (!url) return flash("That doesn't look like an address")
+	let c = srcCfg.find((x) => x.url === url)
+	if (!c) { c = { url, colour: nextColour(), on: true, manual: !!manual, name: name || '' }; srcCfg.push(c) }
+	c.on = true
+	if (manual) c.manual = true
+	saveSources()
+	addSource(c)
+	drawSources()
+}
+function unjoin(url, forget) {
+	const c = srcCfg.find((x) => x.url === url)
+	if (c) { if (forget || !c.manual) srcCfg = srcCfg.filter((x) => x !== c); else c.on = false }
+	saveSources()
+	dropSource(url)
+	drawSources()
+}
+
+// ---- rendering all sources' strips: grouped by source, or in a free arrangement ----
+function place(box, els) {
+	let prev = null
+	for (const el of els) {
+		if (prev ? prev.nextSibling !== el : box.firstChild !== el) box.insertBefore(el, prev ? prev.nextSibling : box.firstChild)
+		prev = el
+	}
+	while (prev && prev.nextSibling) prev.nextSibling.remove()
+	if (!prev) box.innerHTML = ''
+}
+
+function orderedSources() {
+	const all = [...sources.values()]
+	const keys = groupOrder.filter((k) => sources.has(k))
+	for (const X of all) if (!keys.includes(X.key)) keys.push(X.key)
+	return keys.map((k) => sources.get(k))
+}
+
+function render() {
+	if (!HOME.S || !HOME.META) return
+	renderHeader()
+	renderNotices()
+	const rows = PG().layout === 'rows'
+	const box = $('#strips')
+	box.classList.toggle('rows', rows)
+	const multi = joined()
+	const mode = layoutMode()
+	box.classList.toggle('grouped', multi && mode === 'grouped')
+	box.classList.toggle('free', mode === 'free')
+	const want = []
+	for (const X of orderedSources()) {
+		if (!X.S || !X.META) continue
+		for (const inp of X.S.inputs.filter((i) => !i.hidden)) want.push({ X, inp, key: skey(X, inp.id) })
+	}
+	const keys = new Set(want.map((w) => w.key))
+	for (const [k, s] of strips) if (!keys.has(k)) { s.el.remove(); strips.delete(k) }
+	for (const { X, inp, key } of want) {
+		let s = strips.get(key)
+		const st = ps(key)
+		const layoutSig = JSON.stringify([rows, st.pre ?? PG().showPre, st.post ?? PG().showPost, !!st.pinned, inp.channels, inp.caps, grKinds(X, inp), PG()])
+		if (!s || s.layoutSig !== layoutSig) {
+			const el = buildStrip(X, inp, rows)
+			if (s) s.el.replaceWith(el)
+			s = { el, sig: '', layoutSig, X, id: inp.id }
+			strips.set(key, s)
+		}
+		s.el.classList.toggle('tagged', multi)
+		s.el.style.setProperty('--gc', X.colour)
+		if (!rows) s.el.style.width = (st.width || 340) + (st.pinned ? 260 : 0) + 'px'
+		updateStrip(X, s, inp)
+	}
+	if (!movingStrip) {
+		if (multi && mode === 'grouped') {
+			const gl = orderedSources().map((X) => groupEl(X))
+			for (const [k, g] of groupEls) if (!sources.has(k)) { g.remove(); groupEls.delete(k) }
+			place(box, gl)
+			for (const X of orderedSources()) place($('.gbody', groupEls.get(X.key)), want.filter((w) => w.X === X).map((w) => strips.get(w.key).el))
+			renderGroups()
+		} else {
+			const order = freeOrder.filter((k) => keys.has(k))
+			for (const w of want) if (!order.includes(w.key)) order.push(w.key)
+			place(box, (mode === 'free' ? order : want.map((w) => w.key)).map((k) => strips.get(k).el))
+		}
+	}
+	const any = want.length > 0
+	$('#empty').style.display = any || (multi && mode === 'grouped') ? 'none' : ''
+	$('#empty').textContent = HOME.S.connected ? `No audio inputs on ${HOME.META.device.label}` : (HOME.S.deviceError || `Waiting for ${HOME.META.device.label}…`)
+	$('#srcCount').textContent = multi ? '· ' + sources.size : ''
+	if ($('#settings').classList.contains('open')) renderSettings(false)
+	if ($('#sources').classList.contains('open')) drawSourcesSoon()
+}
+
+function groupEl(X) {
+	let g = groupEls.get(X.key)
+	if (g) return g
+	g = document.createElement('div')
+	g.className = 'grp'
+	g.dataset.key = X.key
+	g.innerHTML = `<div class="ghead"><span class="swatch"></span><span class="led mini"></span><span class="gname"></span><span class="gsub"></span><span style="flex:1"></span>
+		<button data-g="pin" style="display:none" data-tip="This source needs its PIN">PIN</button><button data-g="back" data-tip="Move this source's block earlier">◀</button><button data-g="fwd" data-tip="Move this source's block later">▶</button><button data-g="col" data-tip="Fold this source's block away (or open it again)">▾</button></div><div class="gbody"></div>`
+	g.querySelector('.ghead').addEventListener('click', (e) => {
+		const b = e.target.closest('[data-g]')
+		if (!b) return
+		const order = orderedSources().map((x) => x.key)
+		const i = order.indexOf(X.key)
+		if (b.dataset.g === 'col') { groupCollapsed[X.key] = !groupCollapsed[X.key]; LSset('groupCollapsed', groupCollapsed); renderGroups() }
+		else if (b.dataset.g === 'pin') askSourcePin(X)
+		else {
+			const j = b.dataset.g === 'back' ? i - 1 : i + 1
+			if (j < 0 || j >= order.length) return
+			;[order[i], order[j]] = [order[j], order[i]]
+			groupOrder = order
+			LSset('groupOrder', groupOrder)
+			render()
+		}
+	})
+	groupEls.set(X.key, g)
+	return g
+}
+
+function renderGroups() {
+	for (const [k, g] of groupEls) {
+		const X = sources.get(k)
+		if (!X) continue
+		g.style.setProperty('--gc', X.colour)
+		g.classList.toggle('collapsed', !!groupCollapsed[k])
+		$('.gname', g).textContent = X.name
+		const dev = X.META ? X.META.app.name : X.info ? X.info.appName : ''
+		$('.gsub', g).textContent = [dev, X.home ? 'this page' : X.cfg.url.replace(/^https?:\/\//, '')].filter(Boolean).join(' · ')
+		$('.led', g).classList.toggle('ok', X.status === 'ok' && !!(X.S && X.S.connected))
+		$('.led', g).parentElement.dataset.tip = X.status === 'ok' ? (X.S.connected ? `Connected to ${X.META.device.label}` : X.S.deviceError || 'Its desk is not connected') : X.error || X.status
+		$('[data-g=col]', g).textContent = groupCollapsed[k] ? '▸' : '▾'
+		$('[data-g=pin]', g).style.display = X.status === 'pin' ? '' : 'none'
+		const body = $('.gbody', g)
+		if (!X.S) body.innerHTML = `<div class="empty">${esc(X.status === 'pin' ? 'Needs its PIN. Press PIN up there.' : X.status === 'self' ? "That's this page: it's already here." : X.error ? X.error + '. Trying again…' : 'Connecting…')}</div>`
+		else if (!body.querySelector('.strip')) body.innerHTML = `<div class="empty">${esc(X.S.connected ? 'No audio inputs here' : X.S.deviceError || 'Waiting for its desk…')}</div>`
+		else for (const e of $$('.empty', body)) e.remove()
+	}
+}
+
+// free arrangement: drag a strip by its ⠿ handle and drop it anywhere
+$('#strips').addEventListener('pointerdown', (e) => {
+	const h = e.target.closest('.strip .name .drag')
+	if (!h || layoutMode() !== 'free') return
+	e.preventDefault()
+	const el = h.closest('.strip')
+	const box = $('#strips')
+	const rows = box.classList.contains('rows')
+	movingStrip = el
+	el.classList.add('moving')
+	const mv = (ev) => {
+		el.style.pointerEvents = 'none'
+		const t = document.elementFromPoint(ev.clientX, ev.clientY)
+		el.style.pointerEvents = ''
+		const over = t && t.closest('#strips > .strip')
+		if (!over || over === el) return
+		const r = over.getBoundingClientRect()
+		const after = rows ? ev.clientY > r.top + r.height / 2 : ev.clientX > r.left + r.width / 2
+		box.insertBefore(el, after ? over.nextSibling : over)
+	}
+	const up = () => {
+		removeEventListener('pointermove', mv); removeEventListener('pointerup', up)
+		el.classList.remove('moving')
+		movingStrip = null
+		freeOrder = $$('#strips > .strip').map((x) => x.dataset.key)
+		LSset('freeOrder', freeOrder)
+	}
+	addEventListener('pointermove', mv); addEventListener('pointerup', up)
+})
+
+// ---- the Sources panel ----
+const srcEl = $('#sources')
+$('#bSources').onclick = () => { if (srcEl.classList.toggle('open')) { drawSources(); pollPeers() } }
+$('#srcClose').onclick = () => srcEl.classList.remove('open')
+dragPanel(srcEl, $('#srcHead'), 'srcPos')
+let peerTimer = null
+async function pollPeers() {
+	clearTimeout(peerTimer)
+	try { peerList = await HOME.get('/api/peers'); drawSources() } catch {}
+	peerTimer = setTimeout(pollPeers, srcEl.classList.contains('open') ? 4000 : 15000)
+}
+let srcSoon = null
+function drawSourcesSoon() { if (!srcSoon) srcSoon = setTimeout(() => { srcSoon = null; drawSources() }, 400) }
+function srcStatus(X) {
+	if (!X) return '<span class="badge">not joined</span>'
+	if (X.status === 'ok') return X.S && X.S.connected ? '<span class="badge ok">joined</span>' : '<span class="badge warn">joined, desk not connected</span>'
+	if (X.status === 'pin') return '<span class="badge warn">needs PIN</span>'
+	if (X.status === 'self') return '<span class="badge">this page</span>'
+	return `<span class="badge bad">${esc(X.error || X.status)}</span>`
+}
+function drawSources() {
+	if (!srcEl.classList.contains('open') || editing(srcEl)) return
+	const body = $('#srcBody')
+	const mode = layoutMode()
+	const found = (peerList.peers || []).filter((p) => !(HOME.info && p.id === HOME.info.id))
+	const foundUrls = new Set(found.map((p) => normUrl(p.url)))
+	const row = (url, name, sub, X, opts) => `<div class="srow" style="--gc:${esc(opts.colour)}">
+		${opts.tick ? `<input type="checkbox" data-tick="${esc(url)}" data-name="${esc(name)}" ${X ? 'checked' : ''} data-tip="Tick to pull this source's strips into this page">` : '<span class="swatch"></span>'}
+		<div class="sinfo"><b>${esc(name)}</b><span>${esc(sub)}</span></div>${opts.status}
+		<input type="color" data-colour="${esc(url)}" value="${esc(opts.colour)}" data-tip="This source's colour tag">
+		${opts.remove ? `<button class="small" data-remove="${esc(url)}" data-tip="Take this source off the page${opts.manual ? ' and forget its address' : ''}">✕</button>` : ''}</div>`
+	const cfgOf = (url) => srcCfg.find((c) => c.url === url)
+	body.innerHTML = `<div class="card"><h4>Layout</h4><div class="row"><span class="lbl">Joined strips</span><span class="seg"><button data-lay="grouped" class="${mode === 'grouped' ? 'on' : ''}" data-tip="Each source gets its own labelled, colour-tagged block. Move blocks with ◀ ▶ and fold them with ▾.">Grouped by source</button><button data-lay="free" class="${mode === 'free' ? 'on' : ''}" data-tip="Any strip from any source, anywhere: drag a strip by the ⠿ next to its name.">Free arrangement</button></span></div>
+		${mode === 'free' ? '<div class="btns" style="margin-top:6px"><button id="freeReset" data-tip="Put every strip back in source order">Reset the arrangement</button></div>' : ''}
+		<p class="help">The arrangement is remembered in this browser. A joined strip's controls work its own desk, PIN and all.</p></div>
+		<div class="card"><h4>This page</h4>${row('home', HOME.name, (HOME.META ? HOME.META.app.name + ' · ' : '') + location.host, HOME, { colour: HOME.colour, status: '', tick: false })}</div>
+		<div class="card"><h4>Found on the network</h4>${peerList.finder === false ? '<p class="help">The finder is switched off on this connection (Companion connection settings), so nothing turns up here. You can still add pages by address below.</p>' : ''}
+		${found.length ? found.map((p) => { const url = normUrl(p.url); const c = cfgOf(url); return row(url, p.name || p.appName, `${p.appName}${p.device ? ' (' + p.device + ')' : ''} · ${url.replace(/^https?:\/\//, '')}${p.pin ? ' · PIN' : ''}`, c && c.on ? sources.get(url) : null, { colour: (c && c.colour) || nextColour(), status: c && c.on ? srcStatus(sources.get(url)) : '', tick: true }) }).join('') : peerList.finder === false ? '' : '<p class="help">Nobody yet. Other OBS Audio and ATEM Audio connections on this network turn up here within a few seconds (as long as their finder is on). On another subnet or a VPN? Add it by address.</p>'}</div>
+		<div class="card"><h4>Joined</h4>${srcCfg.filter((c) => c.on).map((c) => row(c.url, c.name || c.url, (sources.get(c.url) && sources.get(c.url).META ? sources.get(c.url).META.app.name + ' · ' : '') + c.url.replace(/^https?:\/\//, '') + (c.manual ? ' · added by address' : ''), sources.get(c.url), { colour: c.colour, status: srcStatus(sources.get(c.url)), tick: false, remove: true, manual: c.manual })).join('') || '<p class="help">Nothing joined yet. Tick one above, or add one below.</p>'}
+		${srcCfg.filter((c) => !c.on && c.manual && !foundUrls.has(c.url)).map((c) => `<div class="srow"><div class="sinfo"><b>${esc(c.name || c.url)}</b><span>${esc(c.url)} · off</span></div><button class="small" data-rejoin="${esc(c.url)}">Join</button><button class="small" data-forget="${esc(c.url)}">✕</button></div>`).join('')}</div>
+		<div class="card"><h4>Add by address</h4><div class="row"><input type="text" id="srcAddr" placeholder="192.168.1.20:8890" style="flex:1;width:auto" data-tip="Another OBS Audio or ATEM Audio page: its address and port, as in its page_url variable"><button class="primary" id="srcAdd">Add</button></div>
+		<p class="help">For pages the finder can't hear: another subnet, a VPN, or a finder that's switched off.</p></div>`
+	$$('[data-lay]', body).forEach((b) => b.onclick = () => { LSset('joinLayout', b.dataset.lay); render(); drawSources() })
+	if ($('#freeReset', body)) $('#freeReset', body).onclick = () => { freeOrder = []; LSset('freeOrder', []); render() }
+	$$('[data-tick]', body).forEach((c) => c.onchange = () => (c.checked ? joinUrl(c.dataset.tick, c.dataset.name, false) : unjoin(c.dataset.tick, false)))
+	$$('[data-remove]', body).forEach((b) => b.onclick = () => unjoin(b.dataset.remove, false))
+	$$('[data-forget]', body).forEach((b) => b.onclick = () => { srcCfg = srcCfg.filter((c) => c.url !== b.dataset.forget); saveSources(); drawSources() })
+	$$('[data-rejoin]', body).forEach((b) => b.onclick = () => joinUrl(b.dataset.rejoin, '', true))
+	$$('[data-colour]', body).forEach((x) => x.onchange = () => {
+		if (x.dataset.colour === 'home') { HOME.cfg.colour = x.value; LSset('homeColour', x.value) }
+		else { let c = cfgOf(x.dataset.colour); if (!c) return; c.colour = x.value; saveSources() }
+		render()
+	})
+	$('#srcAdd', body).onclick = () => joinUrl($('#srcAddr', body).value, '', true)
+	$('#srcAddr', body).onkeydown = (e) => { if (e.key === 'Enter') joinUrl(e.target.value, '', true) }
+}
+
+// ---- the Recordings tab: file manager, sheet row, naming, sheet source, uploads (for any joined source) ----
+let recSrc = 'home'
+let recSub = LS('recSub', 'files')
+let REC = null // /rec/state of the source shown
+let FILES = null
+let recDraft = null // naming builder draft
+let recLoadTimer = null
+let preview = null // file being previewed
+const fmtSize = (n) => (n >= 1e9 ? (n / 1e9).toFixed(2) + ' GB' : n >= 1e6 ? (n / 1e6).toFixed(1) + ' MB' : n >= 1e3 ? Math.round(n / 1e3) + ' kB' : n + ' B')
+const fmtDur = (s) => { if (s == null) return ''; s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60); return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s % 60).padStart(2, '0') }
+const recX = () => sources.get(recSrc) || HOME
+
+let recSig = ''
+function recStateChanged(X) {
+	if (tab !== 'files' || !$('#settings').classList.contains('open') || X !== recX()) return
+	const sig = JSON.stringify([X.S.recordings, X.S.recording.active, X.S.recording.lastFile])
+	if (sig === recSig || recLoadTimer) return
+	recSig = sig
+	recLoadTimer = setTimeout(() => { recLoadTimer = null; loadRec(!!X.S.recording.lastFile) }, 400)
+}
+
+async function loadRec(files = true) {
+	const X = recX()
+	try {
+		REC = await X.get('/rec/state')
+		if (files || !FILES) FILES = await X.get('/rec/files')
+	} catch (e) { REC = null; FILES = null }
+	drawRec()
+}
+
+async function recCmd(c) { const j = await recX().cmd(c); await loadRec(true); return j }
+
+function drawRec() {
+	if (tab !== 'files') return
+	const body = $('#sbody')
+	if (editing(body) && !body.dataset.redraw) return
+	delete body.dataset.redraw
+	const X = recX()
+	const srcPick = joined() ? `<div class="row" style="margin-bottom:8px"><span class="lbl">Source</span><select id="recSrc">${orderedSources().filter((x) => x.S).map((x) => `<option value="${esc(x.key)}" ${x.key === recSrc ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>` : ''
+	const subs = [['files', 'Files'], ['row', 'Sheet row'], ['naming', 'Naming'], ['sheet', 'Sheet source'], ['upload', 'Upload'], ['queue', 'Upload queue']]
+	const sum = REC ? REC.summary : null
+	const head = srcPick + `<div class="subtabs">${subs.map(([id, l]) => `<button data-rs="${id}" class="${recSub === id ? 'on' : ''}">${l}${id === 'queue' && sum && sum.failed ? ` <span class="badge bad">${sum.failed}</span>` : ''}</button>`).join('')}</div>`
+	if (!REC) { body.innerHTML = head + `<p class="help">Getting the recordings from ${esc(X.name)}…</p>`; wireRecHead(body); return }
+	const off = !REC.enabled ? `<div class="warnbox"><b>Sheet naming and uploads are off.</b> Recordings keep the device's own names and stay put. <button class="primary" id="recOn">Switch them on</button></div>` : ''
+	let html = ''
+	if (recSub === 'files') html = recFilesHtml()
+	else if (recSub === 'row') html = recRowHtml()
+	else if (recSub === 'naming') html = recNamingHtml()
+	else if (recSub === 'sheet') html = recSheetHtml()
+	else if (recSub === 'upload') html = recUploadHtml()
+	else html = recQueueHtml()
+	body.innerHTML = head + (recSub === 'files' ? '' : off) + html
+	wireRecHead(body)
+	if ($('#recOn', body)) $('#recOn', body).onclick = () => recCmd({ cmd: 'recEnable', value: true })
+	;({ files: wireRecFiles, row: wireRecRow, naming: wireRecNaming, sheet: wireRecSheet, upload: wireRecUpload, queue: wireRecQueue })[recSub](body)
+}
+function wireRecHead(body) {
+	$$('[data-rs]', body).forEach((b) => b.onclick = () => { recSub = b.dataset.rs; LSset('recSub', recSub); recDraft = null; body.dataset.redraw = '1'; drawRec() })
+	if ($('#recSrc', body)) $('#recSrc', body).onchange = (e) => { recSrc = e.target.value; REC = FILES = null; recDraft = null; preview = null; drawRec(); loadRec(true) }
+}
+
+// files
+function recFilesHtml() {
+	const X = recX()
+	const f = FILES || { files: [] }
+	const fileUrl = (n, dl) => X.base + '/rec/file' + X.q('name=' + encodeURIComponent(n) + (dl ? '&download=1' : ''))
+	const pv = preview ? (() => {
+		const isA = /^audio\//.test(preview.type)
+		const tag = isA ? 'audio' : 'video'
+		return `<div class="card preview"><h4>Playing: ${esc(preview.name)}</h4><${tag} src="${esc(fileUrl(preview.name))}" controls autoplay preload="metadata"></${tag}><p class="help">Not playing? Browsers only play some kinds of file (MP4 and MOV mostly, MKV in Chrome, FLV and TS not at all). Download it instead.</p><div class="btns"><button id="pvClose">Close</button></div></div>`
+	})() : ''
+	const where = `<p class="help">Folder: <span class="val">${esc(f.folder || REC.folder || 'not known yet')}</span>${REC.folderOverride ? ' (as this computer sees it)' : ''}. ${f.files.length} recording${f.files.length === 1 ? '' : 's'}.</p>`
+	if (!f.ok && f.error) return pv + `<div class="warnbox"><b>Can't see the recordings.</b> ${esc(f.error)} If ${esc(X.META.device.label)} records to a different computer, put where this computer finds that folder (a mounted share) in Upload → "Recordings folder as this computer sees it".</div>`
+	return pv + where + (f.files.length ? f.files.map((x) => `<div class="frow ${f.busy && x.name.toLowerCase().startsWith(String(f.busy).toLowerCase()) && X.S.recording.active ? 'busy' : ''}">
+		<span class="fname">${esc(x.name)}</span><span class="fmeta">${fmtSize(x.size)}${x.duration != null ? ' · ' + fmtDur(x.duration) : ''} · ${new Date(x.modified).toLocaleString([], { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+		<span class="fbtn"><button data-play="${esc(x.name)}" data-type="${esc(x.type)}" data-tip="Have a look (or a listen) right here">▶ PLAY</button><a class="btn" href="${esc(fileUrl(x.name, true))}" download data-tip="Save a copy to this computer">⤓</a><button data-ren="${esc(x.name)}" data-tip="Give it a new name (it keeps its file type)">RENAME</button><button data-up="${esc(x.name)}" data-tip="Upload this one now, whatever the upload timing says">UPLOAD</button><button data-del="${esc(x.name)}" data-tip="Delete it for good (asks first)">✕</button></span></div>`).join('') : '<p class="help">No recordings in there yet. Go on, press record.</p>') + `<div class="btns" style="margin-top:8px"><button id="fRefresh">Refresh</button></div>`
+}
+function wireRecFiles(body) {
+	const X = recX()
+	if ($('#pvClose', body)) $('#pvClose', body).onclick = () => { preview = null; drawRec() }
+	if ($('#fRefresh', body)) $('#fRefresh', body).onclick = () => loadRec(true)
+	$$('[data-play]', body).forEach((b) => b.onclick = () => { preview = { name: b.dataset.play, type: b.dataset.type }; drawRec() })
+	$$('[data-ren]', body).forEach((b) => b.onclick = () => {
+		const name = b.dataset.ren
+		const dot = name.lastIndexOf('.')
+		dialog('RENAME', `<h3>New name</h3><input type="text" id="rnTo" value="${esc(dot > 0 ? name.slice(0, dot) : name)}" style="width:100%"><p class="help">It keeps its ${esc(dot > 0 ? name.slice(dot) : '')} ending, so it still plays.</p><div class="btns"><button class="primary" id="rnGo">Rename</button><button id="rnNo">Cancel</button></div>`, (d) => {
+			$('#rnNo', d).onclick = closeDialog
+			$('#rnTo', d).focus()
+			$('#rnGo', d).onclick = async () => { const to = $('#rnTo', d).value.trim(); if (!to) return; closeDialog(); await recCmd({ cmd: 'recRename', name, to }) }
+		})
+	})
+	$$('[data-up]', body).forEach((b) => b.onclick = () => recCmd({ cmd: 'recUploadFile', name: b.dataset.up }))
+	$$('[data-del]', body).forEach((b) => b.onclick = async () => {
+		const name = b.dataset.del
+		const ask = await X.cmd({ cmd: 'recDeleteAsk', name })
+		if (!ask || !ask.ok) return
+		const { token } = JSON.parse(ask.message)
+		dialog('DELETE', `<h3>Are you sure?</h3><p>Delete <b>${esc(name)}</b> for good? There's no undo, and no bin to fish it out of.</p><div class="btns"><button class="primary" id="dGo" style="background:var(--red);border-color:var(--red)">Yes, delete it</button><button id="dNo">No, keep it</button></div>`, (d) => {
+			$('#dNo', d).onclick = closeDialog
+			$('#dGo', d).onclick = async () => { closeDialog(); if (preview && preview.name === name) preview = null; await recCmd({ cmd: 'recDelete', name, token }) }
+		})
+	})
+}
+
+// sheet row
+function recRowHtml() {
+	const r = REC.row, t = REC.table, s = REC.settings.rows
+	const time = s.mode === 'time'
+	const tbl = t ? `<div class="rtable"><table><thead><tr><th>#</th>${t.headers.map((h) => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${t.rows.map((row, i) => `<tr data-pick="${i}" class="${r.index === i ? 'cur' : ''}"><td>${i + 1}</td>${row.map((c) => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>` : `<p class="help">No sheet yet. Set one up in Sheet source.</p>`
+	return `<div class="card"><h4>Live row</h4><div class="row"><span class="bigrow">${r.number ?? '–'}</span><span style="flex:1;padding-left:10px" class="help">${esc(r.why || '')}${r.overridden ? ' <span class="badge warn">override</span>' : ''}</span></div>
+		<div class="row"><span class="lbl">Next take is called</span><span class="val" style="overflow-wrap:anywhere">${esc(REC.nextName || '…')}</span></div>
+		<div class="btns" style="margin-top:6px"><button id="rPrev" data-tip="The row before">◀ PREVIOUS</button><button id="rNext" class="primary" data-tip="The next row (next session)">NEXT ▶</button>${time ? `<button id="rRel" ${r.overridden ? '' : 'disabled'} data-tip="Let go of the manual pick and go back to matching by time">RELEASE</button>` : ''}</div></div>
+		<div class="card"><h4>Rows${t ? ' (' + t.rows.length + ')' : ''}</h4><p class="help">Tap a row to make it live.${time ? ' Matching by time: a tap overrides it ' + (s.overrideHold === 'untilNextSlot' ? 'until the next time slot starts.' : 'until you press Release.') : ''}</p>${tbl}</div>
+		<div class="card"><h4>How the row is chosen</h4><div class="grid2 rform">
+		${recSel('rows.mode', 'Row chosen', s.mode, [['manual', 'By hand (pick, next, previous)'], ['time', 'Match by time (start / end columns)']], 'By hand: you (or Companion) choose. By time: the row whose start and end times cover now is live, and you can still override.')}
+		${recChk('rows.autoAdvance', 'Next row after each recording', s.autoAdvance, 'Steps to the next row each time a recording stops: handy for back-to-back sessions.')}
+		${recChk('rows.wrap', 'Wrap round from the last row to the first', s.wrap, '')}
+		${recColSel('rows.keyColumn', 'Key column (for "set by value")', s.keyColumn, t, 'A column with a code per session. Companion can then set the row by that code (or a variable holding it).')}
+		${time ? recColSel('rows.startColumn', 'Start time column', s.startColumn, t, '') + recColSel('rows.endColumn', 'End time column (blank = until the next start)', s.endColumn, t, '') + recColSel('rows.dateColumn', 'Date column (blank = today)', s.dateColumn, t, '') + recSel('rows.dateOrder', 'Dates are written', s.dateOrder, [['dmy', 'Day first (04/11/2026)'], ['mdy', 'Month first (11/04/2026)']], '') + recSel('rows.overrideHold', 'A manual pick holds', s.overrideHold, [['untilNextSlot', 'Until the next time slot'], ['untilReleased', 'Until released']], '') + recChk('rows.keepLastWhenNoSlot', 'Between slots, keep the last row', s.keepLastWhenNoSlot, 'Off: no row (names fall back to date and time) when nothing is scheduled.') + recNum('rows.leadSeconds', 'Start a slot early by (seconds)', s.leadSeconds, '') : ''}
+		</div></div>`
+}
+function wireRecRow(body) {
+	if ($('#rPrev', body)) $('#rPrev', body).onclick = () => recCmd({ cmd: 'recRow', op: 'previous' })
+	if ($('#rNext', body)) $('#rNext', body).onclick = () => recCmd({ cmd: 'recRow', op: 'next' })
+	if ($('#rRel', body)) $('#rRel', body).onclick = () => recCmd({ cmd: 'recRow', op: 'release' })
+	$$('[data-pick]', body).forEach((tr) => tr.onclick = () => recCmd({ cmd: 'recRow', op: 'pick', index: +tr.dataset.pick }))
+	wireRecFields(body)
+}
+
+// small form helpers: data-rk="section.key"
+function recSel(k, label, v, opts, tip) { return `<div class="row" data-tip="${esc(tip)}"><span class="lbl">${esc(label)}</span><select data-rk="${k}">${opts.map(([id, l]) => `<option value="${esc(id)}" ${String(v) === id ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>` }
+function recChk(k, label, v, tip) { return `<div class="row" data-tip="${esc(tip)}"><span class="lbl">${esc(label)}</span><select data-rk="${k}" data-bool="1"><option value="true" ${v ? 'selected' : ''}>Yes</option><option value="false" ${!v ? 'selected' : ''}>No</option></select></div>` }
+function recNum(k, label, v, tip) { return `<div class="row" data-tip="${esc(tip)}"><span class="lbl">${esc(label)}</span><input type="number" data-rk="${k}" data-num="1" value="${esc(v)}" step="any"></div>` }
+function recText(k, label, v, tip, type = 'text', ph = '') { return `<div class="row" data-tip="${esc(tip)}"><span class="lbl">${esc(label)}</span><input type="${type}" data-rk="${k}" value="${esc(v)}" placeholder="${esc(ph)}"></div>` }
+function recColSel(k, label, v, t, tip) { const cols = t ? t.headers : []; const opts = [['', '(none)'], ...cols.map((c) => [c, c])]; if (v && !cols.includes(v)) opts.push([v, v + ' (not in the sheet)']); return recSel(k, label, v, opts, tip) }
+function wireRecFields(body) {
+	$$('[data-rk]', body).forEach((x) => x.addEventListener('change', () => {
+		const [sec, key] = x.dataset.rk.split('.')
+		let v = x.value
+		if (x.dataset.bool) v = v === 'true'
+		else if (x.dataset.num) { v = Number(v); if (Number.isNaN(v)) return flash('That needs a number') }
+		else if (x.dataset.list) v = v.split(',').map((t) => t.trim()).filter(Boolean)
+		recCmd({ cmd: 'recConfigure', settings: { [sec]: { [key]: v } } })
+	}))
+}
+
+// naming builder
+function recNamingHtml() {
+	const n = recDraft || (recDraft = JSON.parse(JSON.stringify(REC.settings.naming)))
+	const cols = REC.table ? REC.table.headers : []
+	const tokens = [['date', 'Date'], ['time', 'Time'], ['source', 'Source name'], ['take', 'Take number'], ['row', 'Row number']]
+	const label = (p) => (p.startsWith('text:') ? '"' + p.slice(5) + '"' : p.startsWith('var:') ? '$(' + p.slice(4) + ')' : (tokens.find((t) => t[0] === p) || [p, p])[1])
+	return `<div class="card"><h4>The name</h4><p class="help">Pick what goes in the name, in order. Tap a part to take it out; ◀ ▶ move it.</p>
+		<div class="chips" id="nParts">${n.parts.map((p, i) => `<span class="chip">${esc(label(p))}<button data-nl="${i}" data-tip="Earlier">◀</button><button data-nr="${i}" data-tip="Later">▶</button><button data-nx="${i}" data-tip="Take it out">✕</button></span>`).join('') || '<span class="help">Nothing yet: pick some below.</span>'}</div>
+		<p class="lbl" style="margin:10px 0 4px">Sheet columns</p><div class="chips">${cols.map((c) => `<span class="chip add" data-nadd="${esc(c)}">+ ${esc(c)}</span>`).join('') || '<span class="help">No sheet yet (Sheet source).</span>'}</div>
+		<p class="lbl" style="margin:10px 0 4px">Other bits</p><div class="chips">${tokens.map(([id, l]) => `<span class="chip add" data-nadd="${id}">+ ${esc(l)}</span>`).join('')}<span class="chip add" id="nText">+ Some text…</span><span class="chip add" id="nVar">+ A Companion variable…</span></div>
+		<div class="grid2 rform" style="margin-top:10px">
+		<div class="row" data-tip="Goes between the parts. Empty parts are skipped, so no double dashes."><span class="lbl">Between parts</span><input type="text" id="nSep" value="${esc(n.separator)}"></div>
+		<div class="row" data-tip="YYYY, YY, MM, DD"><span class="lbl">Date looks like</span><input type="text" id="nDate" value="${esc(n.dateFormat)}"></div>
+		<div class="row" data-tip="HH, mm, ss (no colons: they can't go in file names)"><span class="lbl">Time looks like</span><input type="text" id="nTime" value="${esc(n.timeFormat)}"></div>
+		<div class="row" data-tip="When the name's already used: add (2), or a take number"><span class="lbl">Name already used</span><select id="nColl"><option value="suffix" ${n.collision === 'suffix' ? 'selected' : ''}>Add (2), (3)…</option><option value="take" ${n.collision === 'take' ? 'selected' : ''}>Add a take number</option></select></div>
+		<div class="row" data-tip="Characters that can't go in file names become this"><span class="lbl">Odd characters become</span><input type="text" id="nRep" value="${esc(n.replaceWith)}"></div>
+		<div class="row" data-tip="Longest name, not counting the ending"><span class="lbl">Longest name</span><input type="number" id="nMax" value="${n.maxLength}"></div>
+		<div class="row" data-tip="Used when everything else came out blank"><span class="lbl">If it all comes out blank</span><input type="text" id="nFall" value="${esc(n.fallbackName)}"></div>
+		</div>
+		<div class="row" style="margin-top:8px" data-tip="Or write the whole pattern yourself: {Column}, {date}, {time}, {source}, {take}, {row}, {var:name}. When this has anything in it, it wins over the parts above."><span class="lbl">Or a pattern (advanced)</span><input type="text" id="nTpl" value="${esc(n.template)}" style="width:62%" placeholder="{Session} - {Speaker} {date}"></div></div>
+		<div class="card"><h4>Preview (live row)</h4><div class="namepv" id="nPv">…</div>
+		<div class="grid2 rform" style="margin-top:8px">${recChk('rename.nameAtStart', `Name the file on ${X_LABEL()} before it starts`, REC.settings.rename.nameAtStart, 'Sets the name just before recording starts, so the file is right from the off.')}${recChk('rename.renameAfterStop', 'Rename after stop if the row changed', REC.settings.rename.renameAfterStop, 'Moved on a row during the take? The file gets the new row\'s name once it\'s finished.')}</div>
+		<div class="btns" style="margin-top:8px"><button class="primary" id="nSave">Save the naming</button><button id="nUndo">Undo changes</button></div></div>`
+}
+const X_LABEL = () => esc((recX().META || HOME.META).device.label)
+let pvTimer = null
+function namingPreview() {
+	clearTimeout(pvTimer)
+	pvTimer = setTimeout(async () => {
+		const j = await recX().cmd({ cmd: 'recPreview', naming: recDraft })
+		const el = $('#nPv')
+		if (el && j && j.ok) el.textContent = j.message || '(blank)'
+	}, 150)
+}
+function wireRecNaming(body) {
+	const n = recDraft
+	const redraw = () => { body.dataset.redraw = '1'; drawRec() }
+	$$('[data-nadd]', body).forEach((c) => c.onclick = () => { n.parts.push(c.dataset.nadd); redraw() })
+	$$('[data-nx]', body).forEach((b) => b.onclick = () => { n.parts.splice(+b.dataset.nx, 1); redraw() })
+	const mv = (i, j) => { if (j < 0 || j >= n.parts.length) return; [n.parts[i], n.parts[j]] = [n.parts[j], n.parts[i]]; redraw() }
+	$$('[data-nl]', body).forEach((b) => b.onclick = () => mv(+b.dataset.nl, +b.dataset.nl - 1))
+	$$('[data-nr]', body).forEach((b) => b.onclick = () => mv(+b.dataset.nr, +b.dataset.nr + 1))
+	$('#nText', body).onclick = () => { const t = prompt('Text to put in the name'); if (t) { n.parts.push('text:' + t); redraw() } }
+	$('#nVar', body).onclick = () => { const t = prompt('Companion variable, e.g. internal:custom_session'); if (t) { n.parts.push('var:' + t.replace(/^\$\(|\)$/g, '')); redraw() } }
+	const bind = (id, key, num) => $('#' + id, body).addEventListener('input', (e) => { n[key] = num ? Number(e.target.value) : e.target.value; namingPreview() })
+	bind('nSep', 'separator'); bind('nDate', 'dateFormat'); bind('nTime', 'timeFormat'); bind('nRep', 'replaceWith'); bind('nMax', 'maxLength', true); bind('nFall', 'fallbackName'); bind('nTpl', 'template')
+	$('#nColl', body).onchange = (e) => { n.collision = e.target.value; namingPreview() }
+	$('#nSave', body).onclick = async () => { await recCmd({ cmd: 'recConfigure', settings: { naming: n } }); recDraft = null; flash('Naming saved'); redraw() }
+	$('#nUndo', body).onclick = () => { recDraft = null; redraw() }
+	wireRecFields(body)
+	namingPreview()
+}
+
+// sheet source
+function recSheetHtml() {
+	const s = REC.settings.sheet, st = REC.sheet
+	const badge = s.kind === 'none' ? '<span class="badge">none</span>' : st.error ? `<span class="badge bad">problem</span>` : st.ok ? '<span class="badge ok">ok</span>' : '<span class="badge warn">waiting</span>'
+	return `<div class="card"><h4>Where the rows come from ${badge}</h4>
+		<div class="row"><span class="lbl">Sheet</span><span class="seg"><button data-sk="none" class="${s.kind === 'none' ? 'on' : ''}">None</button><button data-sk="google" class="${s.kind === 'google' ? 'on' : ''}">Google Sheet</button><button data-sk="file" class="${s.kind === 'file' ? 'on' : ''}">CSV / Excel file</button></span></div>
+		${st.error ? `<div class="warnbox" style="margin-top:8px"><b>Hmm.</b> ${esc(st.error)}${st.ok ? ' (still using the last good copy)' : ''}</div>` : ''}
+		${st.ok ? `<p class="help">${st.rowCount} rows from ${esc(st.label)}, ${st.loadedAt ? 'read ' + new Date(st.loadedAt).toLocaleTimeString() : ''}.</p>` : ''}</div>
+		${s.kind === 'google' ? `<div class="card"><h4>Google Sheet</h4><div class="rform">
+			${recText('sheet.googleUrl', 'Link', s.googleUrl, "Copy it from the browser's address bar (or Share → Copy link). The sheet must be shared 'Anyone with the link can view', or published to the web.", 'url', 'https://docs.google.com/spreadsheets/d/…')}
+			${recText('sheet.tab', 'Tab (blank = the one in the link)', s.tab, 'A tab name, or its gid number from the link')}
+			${recNum('sheet.pollSeconds', 'Re-read every (seconds, 0 = only when asked)', s.pollSeconds, 'Edits in the sheet turn up this often')}
+			${recNum('sheet.headerRow', 'Column names are on row', s.headerRow, '')}</div>
+			<div class="btns" style="margin-top:6px"><button id="shRefresh" class="primary">Read it now</button></div>
+			<p class="help">Private sheets that need a Google sign-in can't be read (yet): share it "anyone with the link can view", or use File → Download → CSV and drop that in instead.</p></div>` : ''}
+		${s.kind === 'file' ? `<div class="card"><h4>CSV or Excel file</h4><div class="drop" id="shDrop">Drop a .csv or .xlsx file here, or <label style="color:var(--on);cursor:pointer;text-decoration:underline">pick one<input type="file" id="shFile" accept=".csv,.txt,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none"></label></div>
+			<div class="rform" style="margin-top:6px">${recText('sheet.excelSheet', 'Excel: which sheet (blank = first)', s.excelSheet, 'Its name, or its position (1 = first)')}${recNum('sheet.headerRow', 'Column names are on row', s.headerRow, '')}</div>
+			<p class="help">The file's kept in the module, so names still work after a restart. Changed the spreadsheet? Drop it in again.</p></div>` : ''}
+		${REC.table ? `<div class="card"><h4>Columns</h4><div class="chips">${REC.table.headers.map((h) => `<span class="chip">${esc(h)}</span>`).join('')}</div></div>` : ''}`
+}
+function wireRecSheet(body) {
+	$$('[data-sk]', body).forEach((b) => b.onclick = () => recCmd({ cmd: 'recConfigure', settings: { sheet: { kind: b.dataset.sk } } }))
+	if ($('#shRefresh', body)) $('#shRefresh', body).onclick = () => recCmd({ cmd: 'recSheetRefresh' })
+	const drop = $('#shDrop', body)
+	const send = async (file) => {
+		if (!file) return
+		const X = recX()
+		try {
+			const r = await fetch(X.base + '/rec/sheet' + X.q('name=' + encodeURIComponent(file.name)), { method: 'POST', body: file, headers: X.hdr() })
+			const j = await r.json()
+			flash(j.ok ? j.message : j.error || "Couldn't read that file")
+		} catch { flash("Couldn't send the file") }
+		loadRec(false)
+	}
+	if (drop) {
+		drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('over') })
+		drop.addEventListener('dragleave', () => drop.classList.remove('over'))
+		drop.addEventListener('drop', (e) => { e.preventDefault(); drop.classList.remove('over'); send(e.dataTransfer.files[0]) })
+		$('#shFile', body).onchange = (e) => send(e.target.files[0])
+	}
+	wireRecFields(body)
+}
+
+// upload settings
+const DEST_KINDS = [['rclone', 'Google Drive / Dropbox / OneDrive… (rclone)'], ['share', 'Network share / NAS'], ['ftp', 'FTP'], ['sftp', 'SFTP'], ['webdav', 'WebDAV'], ['http', 'Web address (HTTP POST / PUT)']]
+function recUploadHtml() {
+	const u = REC.settings.upload
+	const rc = REC.rclone
+	const destHtml = (d, i) => {
+		const f = (key, label, type = 'text', tip = '', ph = '') => `<div class="row" data-tip="${esc(tip)}"><span class="lbl">${esc(label)}</span><input type="${type}" data-dk="${i}.${key}" value="${esc(type === 'password' ? '' : d[key] ?? '')}" placeholder="${esc(type === 'password' && d.hasPassword ? '•••••• (saved: blank keeps it)' : ph)}"></div>`
+		const kindFields = {
+			rclone: f('remote', 'rclone remote', 'text', 'A remote you set up with "rclone config", e.g. gdrive or gdrive:Shows (the same ones Companion Sync uses)', 'gdrive:Recordings'),
+			share: f('path', 'Folder (mounted share)', 'text', 'Where the share is mounted on this computer, e.g. /Volumes/Media or \\\\\\\\nas\\\\media. It has to be connected already.', '/Volumes/Media'),
+			ftp: f('host', 'Server') + f('port', 'Port (0 = 21)', 'number') + f('user', 'User') + f('password', 'Password', 'password') + f('basePath', 'Folder on the server') + `<div class="row"><span class="lbl">Use TLS (FTPS)</span><select data-dk="${i}.tls" data-bool="1"><option value="true" ${d.tls ? 'selected' : ''}>Yes</option><option value="false" ${!d.tls ? 'selected' : ''}>No</option></select></div>`,
+			sftp: f('host', 'Server') + f('port', 'Port (0 = 22)', 'number') + f('user', 'User') + f('password', 'Password', 'password') + f('basePath', 'Folder on the server'),
+			webdav: f('url', 'Address', 'url', 'The WebDAV folder, e.g. https://cloud.example.com/remote.php/dav/files/me/') + f('user', 'User') + f('password', 'Password', 'password') + `<div class="row"><span class="lbl">Make missing folders</span><select data-dk="${i}.createFolders" data-bool="1"><option value="true" ${d.createFolders ? 'selected' : ''}>Yes</option><option value="false" ${!d.createFolders ? 'selected' : ''}>No</option></select></div>`,
+			http: f('url', 'Address', 'url', 'Where to send it. {path} and {name} get filled in.') + `<div class="row"><span class="lbl">Method</span><select data-dk="${i}.method"><option ${d.method === 'POST' ? 'selected' : ''}>POST</option><option ${d.method === 'PUT' ? 'selected' : ''}>PUT</option></select></div>` + f('user', 'User') + f('password', 'Password', 'password'),
+		}[d.kind] || ''
+		return `<div class="card"><div class="row"><input type="text" data-dk="${i}.name" value="${esc(d.name)}" style="flex:1;width:auto" data-tip="A name for this destination"><span class="badge">${esc((DEST_KINDS.find((k) => k[0] === d.kind) || [d.kind, d.kind])[1])}</span><select data-dk="${i}.enabled" data-bool="1"><option value="true" ${d.enabled ? 'selected' : ''}>On</option><option value="false" ${!d.enabled ? 'selected' : ''}>Off</option></select><button class="small" data-dx="${i}" data-tip="Remove this destination">✕</button></div><div class="rform">${kindFields}</div></div>`
+	}
+	return (rc && !rc.ok ? `<div class="warnbox"><b>rclone isn't there.</b> ${esc(rc.error)}</div>` : '') +
+		`<div class="card"><h4>Uploads</h4><div class="grid2 rform">
+		${recChk('upload.enabled', 'Upload recordings', u.enabled, 'Master switch. The upload is a copy: the recording stays on this computer too.')}
+		${recSel('upload.when', 'When', u.when, [['afterStop', 'After each recording stops'], ['manual', 'Only when asked (button or action)'], ['scheduled', 'At a set time each day']], 'After stop: queued straight away, retried if the network drops. Only when asked: waits for Upload now. Set time: e.g. once the show is over.')}
+		${u.when === 'scheduled' ? recText('upload.at', 'Time of day (HH:MM)', u.at, '24 hour, this computer\'s time') : ''}
+		${recSel('upload.layout', 'Folders', u.layout, [['dated', 'A folder, then one per day'], ['fixed', 'One fixed folder'], ['pattern', 'A pattern from sheet columns and date']], '')}
+		${u.layout !== 'pattern' ? recText('upload.folder', 'Folder', u.folder, 'Blank = the top level') : recText('upload.folderPattern', 'Folder pattern', u.folderPattern, '{Event}/{date}: / makes sub-folders. Same tokens as the name.')}
+		${u.layout === 'dated' ? recText('upload.datedFormat', 'Day folder looks like', u.datedFormat, 'YYYY, MM, DD') : ''}
+		${recNum('upload.maxAttempts', 'Tries before giving up (0 = keep trying)', u.maxAttempts, '')}
+		${recText('upload.rclonePath', 'rclone program', u.rclonePath, 'Its name, or the full path if it\'s somewhere unusual')}
+		</div></div>
+		<div class="card"><h4>Recordings folder</h4><div class="rform">
+		<div class="row"><span class="lbl">${X_LABEL()} records to</span><span class="val" style="overflow-wrap:anywhere">${esc(REC.deviceFolder || 'not known yet')}</span></div>
+		<div class="row" data-tip="Only if this computer reaches that folder under another name (a mounted share, say). Blank = the same as above."><span class="lbl">Recordings folder as this computer sees it</span><input type="text" id="fOver" value="${esc(REC.folderOverride)}" placeholder="(same)"></div>
+		<div class="row" data-tip="Sheet naming sets the device's file name just before each take. On: put the old setting back once the take has started."><span class="lbl">Put the device's own file name back after starting</span><select id="fRestore"><option value="true" ${REC.restoreName ? 'selected' : ''}>Yes</option><option value="false" ${!REC.restoreName ? 'selected' : ''}>No</option></select></div>
+		<div class="row"><span class="lbl">Sheet naming and uploads</span><select id="fEnable"><option value="true" ${REC.enabled ? 'selected' : ''}>On</option><option value="false" ${!REC.enabled ? 'selected' : ''}>Off</option></select></div></div></div>
+		<h4 style="margin:10px 0 6px;font:800 11px var(--head);letter-spacing:.08em;color:var(--on)">DESTINATIONS (each file goes to each one that's on)</h4>
+		${u.destinations.map(destHtml).join('') || '<p class="help">None yet.</p>'}
+		<div class="row"><select id="dKind">${DEST_KINDS.map(([id, l]) => `<option value="${id}">${esc(l)}</option>`).join('')}</select><button id="dAdd" class="primary">+ Add destination</button></div>`
+}
+function wireRecUpload(body) {
+	wireRecFields(body)
+	const dests = () => JSON.parse(JSON.stringify(REC.settings.upload.destinations))
+	const save = (list) => recCmd({ cmd: 'recConfigure', settings: { upload: { destinations: list } } })
+	$$('[data-dk]', body).forEach((x) => x.addEventListener('change', () => {
+		const [i, key] = x.dataset.dk.split('.')
+		const list = dests()
+		let v = x.value
+		if (x.dataset.bool) v = v === 'true'
+		else if (x.type === 'number') v = Number(v) || 0
+		list[+i][key] = v
+		save(list)
+	}))
+	$$('[data-dx]', body).forEach((b) => b.onclick = () => { if (!confirm('Remove this destination?')) return; const list = dests(); list.splice(+b.dataset.dx, 1); save(list) })
+	$('#dAdd', body).onclick = () => {
+		const kind = $('#dKind', body).value
+		const base = { id: 'd' + Date.now().toString(36), name: (DEST_KINDS.find((k) => k[0] === kind) || [kind, kind])[1].split(' (')[0], enabled: true, kind }
+		const extra = { rclone: { remote: '' }, share: { path: '' }, ftp: { host: '', port: 0, user: '', password: '', tls: false, basePath: '' }, sftp: { host: '', port: 0, user: '', password: '', tls: false, basePath: '' }, webdav: { url: '', user: '', password: '', createFolders: true, headers: {} }, http: { url: '', method: 'PUT', postFormat: 'multipart', fieldName: 'file', user: '', password: '', headers: {} } }[kind]
+		save([...dests(), { ...base, ...extra }])
+	}
+	$('#fOver', body).onchange = (e) => recCmd({ cmd: 'recFolderOverride', value: e.target.value })
+	$('#fRestore', body).onchange = (e) => recCmd({ cmd: 'recRestoreName', value: e.target.value === 'true' })
+	$('#fEnable', body).onchange = (e) => recCmd({ cmd: 'recEnable', value: e.target.value === 'true' })
+}
+
+// upload queue
+function recQueueHtml() {
+	const list = REC.uploads.slice().reverse()
+	const s = REC.summary
+	const badge = (st) => `<span class="badge ${st === 'done' ? 'ok' : st === 'failed' ? 'bad' : st === 'uploading' ? 'on' : st === 'retrying' ? 'warn' : ''}">${st}</span>`
+	return (REC.rclone && !REC.rclone.ok ? `<div class="warnbox"><b>rclone isn't there.</b> ${esc(REC.rclone.error)}</div>` : '') +
+		`<div class="card"><h4>Queue</h4><p class="help">${s.queued + s.held + s.retrying} waiting · ${s.uploading} going · ${s.done} done · ${s.failed} failed${s.active ? ' · now: ' + esc(s.active) : ''}</p>
+		<div class="btns"><button class="primary" id="qNow" data-tip="Send everything waiting, now">UPLOAD NOW</button><button id="qRetry" ${s.failed ? '' : 'disabled'} data-tip="Give the failed ones another go">RETRY FAILED</button><button id="qClear" data-tip="Tidy away the finished ones (the files stay put)">CLEAR DONE</button></div></div>` +
+		(list.length ? list.map((i) => `<div class="frow"><span class="fname">${esc(i.remoteName)}<br><span class="fmeta">→ ${esc(i.destName)}${i.remoteFolder ? ' / ' + esc(i.remoteFolder) : ''}</span>${i.status === 'uploading' ? `<div class="prog"><div style="width:${i.percent}%"></div></div>` : ''}${i.error ? `<br><span style="color:var(--amber);font-size:11px">${esc(i.error)}</span>` : ''}</span>
+			<span class="fmeta">${badge(i.status)} ${i.status === 'uploading' ? i.percent + '%' : ''}${i.status === 'retrying' && i.nextTry ? ' again at ' + new Date(i.nextTry).toLocaleTimeString() : ''}</span>
+			<span class="fbtn">${i.status === 'failed' || i.status === 'retrying' || i.status === 'held' ? `<button data-qr="${i.id}" data-tip="Try this one now">RETRY</button>` : ''}<button data-qx="${i.id}" data-tip="Take it out of the queue (the file stays put)">✕</button></span></div>`).join('') : '<p class="help">Nothing in the queue. All quiet.</p>')
+}
+function wireRecQueue(body) {
+	$('#qNow', body).onclick = () => recCmd({ cmd: 'recUploadNow', includeFailed: false })
+	$('#qRetry', body).onclick = () => recCmd({ cmd: 'recRetry' })
+	$('#qClear', body).onclick = () => recCmd({ cmd: 'recClear', includeFailed: false })
+	$$('[data-qr]', body).forEach((b) => b.onclick = () => recCmd({ cmd: 'recRetry', id: b.dataset.qr }))
+	$$('[data-qx]', body).forEach((b) => b.onclick = () => recCmd({ cmd: 'recRemove', id: b.dataset.qx }))
+}
+
 // ---- settings panel (floating, draggable, same size on every tab) ----
 const setEl = $('#settings')
 const savedPos = LS('setPos', null)
 if (savedPos) { setEl.style.left = Math.min(savedPos[0], innerWidth - 100) + 'px'; setEl.style.top = Math.min(savedPos[1], innerHeight - 60) + 'px' }
-$('#setHead').addEventListener('pointerdown', (e) => {
-	if (e.target.closest('button')) return
-	e.preventDefault()
-	const r = setEl.getBoundingClientRect(), x0 = e.clientX - r.left, y0 = e.clientY - r.top
-	const mv = (ev) => { setEl.style.left = Math.max(0, Math.min(innerWidth - 80, ev.clientX - x0)) + 'px'; setEl.style.top = Math.max(0, Math.min(innerHeight - 40, ev.clientY - y0)) + 'px' }
-	const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); LSset('setPos', [parseInt(setEl.style.left), parseInt(setEl.style.top)]) }
-	addEventListener('pointermove', mv); addEventListener('pointerup', up)
-})
+function dragPanel(el, head, key) {
+	head.addEventListener('pointerdown', (e) => {
+		if (e.target.closest('button')) return
+		e.preventDefault()
+		const r = el.getBoundingClientRect(), x0 = e.clientX - r.left, y0 = e.clientY - r.top
+		el.style.right = 'auto'
+		const mv = (ev) => { el.style.left = Math.max(0, Math.min(innerWidth - 80, ev.clientX - x0)) + 'px'; el.style.top = Math.max(0, Math.min(innerHeight - 40, ev.clientY - y0)) + 'px' }
+		const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); LSset(key, [parseInt(el.style.left), parseInt(el.style.top)]) }
+		addEventListener('pointermove', mv); addEventListener('pointerup', up)
+	})
+}
+dragPanel(setEl, $('#setHead'), 'setPos')
 function openSettings(t) {
 	tab = t
 	$$('[data-tab]').forEach((x) => x.classList.toggle('on', x.dataset.tab === tab))
@@ -933,12 +1672,18 @@ const PAGE_FIELDS = [
 	['meterRateHz', 'Meter updates per second', 'number', null, 'Up to 30. Lower is kinder to slow devices.'],
 	['fineRatio', 'Fine mode ratio', 'number', null, 'How much smaller fader moves are in fine mode (0.2 = a fifth).'],
 	['doubleTapUnity', 'Double-tap a fader for 0 dB', 'bool', null, ''],
+	['meterPaleBack', 'Faint colours behind the meters', 'bool', null, 'The unlit part of each meter shows its colour zones, faintly, so you can see where green ends before it lights up.'],
+	['meterPaleStrength', 'How faint (0 to 1)', 'number', null, '0 = black, 1 = full colour. About 0.2 is easy on the eye.'],
+	['faderScaleSide', 'Fader dB scale', 'choice', [['left', 'Left of the fader'], ['right', 'Right of the fader']], 'Which side of the fader its dB markings sit.'],
+	['meterScaleSide', 'Meter dB scale', 'choice', [['left', 'Left of the meters'], ['right', 'Right of the meters']], 'Which side of the meters their dB markings sit.'],
+	['capColour', 'Fader cap colour', 'color', null, 'The colour of the big fader knobs.'],
+	['capLineColour', 'Fader cap centre line', 'color', null, 'The bright line across the middle of each fader cap.'],
 ]
 
 function renderSettings(force) {
 	const body = $('#sbody')
 	if (!force && editing(body)) return
-	if (!force && (tab === 'sections' || tab === 'io' || tab === 'recording')) return
+	if (!force && (tab === 'sections' || tab === 'io' || tab === 'recording' || tab === 'files')) return
 	const st = S.store
 	if (tab === 'page') {
 		body.innerHTML = `<p class="help">These live in the module, so every browser sees the same thing. You can set them from Companion too ("Fader page: change a setting").</p><div class="grid2">${PAGE_FIELDS.map(([k, l, t, ch, tip]) => {
@@ -952,7 +1697,7 @@ function renderSettings(force) {
 		}).join('')}</div>`
 		$$('[data-p]', body).forEach((x) => x.addEventListener('change', () => cmd({ cmd: 'page', key: x.dataset.p, value: x.value })))
 	} else if (tab === 'defaults') {
-		body.innerHTML = `<p class="help">Every input starts from these. Anything changed on an input itself (purple in its advanced settings) wins.</p>` + groups().map(([g, title]) => `<div class="card"><h4>${title}</h4><div class="grid2">${Object.entries(META.inputFields).filter(([, f]) => f.group === g && f.type !== 'input').map(([k, f]) => `<div class="row" data-tip="${esc(f.help || '')}"><span class="lbl">${esc(f.label)}${f.unit ? ' (' + esc(f.unit) + ')' : ''}</span>${fieldInput(k, f, st.defaults[k], `data-d="${k}"`)}</div>`).join('')}</div></div>`).join('')
+		body.innerHTML = `<p class="help">Every input starts from these. Anything changed on an input itself (purple in its advanced settings) wins.</p>` + groups(HOME).map(([g, title]) => `<div class="card"><h4>${title}</h4><div class="grid2">${Object.entries(META.inputFields).filter(([, f]) => f.group === g && f.type !== 'input').map(([k, f]) => `<div class="row" data-tip="${esc(f.help || '')}"><span class="lbl">${esc(f.label)}${f.unit ? ' (' + esc(f.unit) + ')' : ''}</span>${fieldInput(HOME, k, f, st.defaults[k], `data-d="${k}"`)}</div>`).join('')}</div></div>`).join('')
 		$$('[data-d]', body).forEach((x) => x.addEventListener('change', () => cmd({ cmd: 'defaultSetting', key: x.dataset.d, value: x.value })))
 	} else if (tab === 'buttons') {
 		body.innerHTML = `<p class="help">The auto gain button on each input (Companion preset): <b>press</b> = this level please, <b>double tap</b> = calibrate to the input's own level, <b>press and hold</b> = calibrate to the module level below.</p>
@@ -983,6 +1728,10 @@ function renderSettings(force) {
 		$$('[data-isec]', body).forEach((s) => s.addEventListener('change', () => cmd({ cmd: 'inputSection', input: s.dataset.in, section: s.dataset.isec, mode: s.value || null })))
 	} else if (tab === 'recording') {
 		drawRecording()
+	} else if (tab === 'files') {
+		body.dataset.redraw = '1'
+		drawRec()
+		loadRec(true)
 	} else if (tab === 'io') {
 		drawIO()
 	} else if (tab === 'about') {
@@ -1049,7 +1798,7 @@ function drawIO() {
 	let parts = ''
 	if (importFile) {
 		const st = importFile.store || importFile
-		const list = [['page', 'Page and meter settings'], ['sections', 'Sections'], ['defaults', 'Auto gain defaults'], ['gestures', 'Button timings and module calibrate level'], ['order', 'Input order and hidden inputs']]
+		const list = [['page', 'Page and meter settings'], ['sections', 'Sections'], ['defaults', 'Auto gain defaults'], ['gestures', 'Button timings and module calibrate level'], ['order', 'Input order and hidden inputs'], ['recordings', 'Recordings: sheet, naming and upload settings']]
 		for (const n of Object.keys(st.inputs || {})) list.push(['input:' + n, 'Input: ' + ((S.inputs.find((i) => i.id === n) || { name: n }).name)])
 		parts = `<div class="card"><h4>Import ${esc(importFile.exported ? 'from ' + importFile.exported.slice(0, 16).replace('T', ' ') : '')}</h4><div class="checks">${list.map(([id, l]) => `<label><input type="checkbox" data-part="${esc(id)}" checked>${esc(l)}</label>`).join('')}</div>
 			<p class="help">The settings in use now go into the autosave first, so you can roll this back if you change your mind.</p><div class="btns"><button id="iGo" class="primary">Import ticked parts</button><button id="iCancel">Cancel</button></div></div>`
@@ -1075,8 +1824,8 @@ function drawIO() {
 	$('#iRestore').onclick = async () => { if (confirm('Roll back to the autosave?')) { await cmd({ cmd: 'restoreAutosave' }); drawIO() } }
 }
 
-addEventListener('resize', () => { if (S) for (const [n, s] of strips) { const inp = S.inputs.find((i) => i.id === n); if (inp) updateStrip(s, inp) } })
-connect()
+addEventListener('resize', () => { for (const s of strips.values()) { const inp = s.X.S && s.X.S.inputs.find((i) => i.id === s.id); if (inp) updateStrip(s.X, s, inp) } })
+loadInfo().then(connect)
 </script>
 </body>
 </html>
