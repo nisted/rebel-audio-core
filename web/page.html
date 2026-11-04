@@ -214,6 +214,8 @@ main { flex: 1; overflow: auto; padding: 8px; min-height: 0; }
 .subtabs button { padding: 4px 8px; font-size: 10px; }
 .rform .row input[type=text], .rform .row input[type=password], .rform .row input[type=url] { width: 62%; }
 .rform .row input[type=number] { width: 90px; }
+.rform .row select { width: auto; max-width: 62%; }
+@media (max-width: 600px) { #settings { left: 8px !important; top: 46px !important; height: calc(100vh - 54px); } .grid2 { grid-template-columns: 1fr; } }
 input[type=password], input[type=url] { background: var(--bg); border: 1px solid var(--line); padding: 3px 5px; min-width: 0; color: var(--fg); }
 .frow { border-bottom: 1px solid var(--line); padding: 6px 0; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
 .frow .fname { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; }
@@ -965,13 +967,13 @@ function makeSource(cfg, home) {
 	X.hdr = (extra = {}) => (X.pin() ? { ...extra, 'X-Rebel-Pin': X.pin() } : extra)
 	Object.defineProperty(X, 'name', { get: () => (X.info && X.info.name) || cfg.name || (home ? '%APP_NAME%' : cfg.url.replace(/^https?:\/\//, '')) })
 	Object.defineProperty(X, 'colour', { get: () => cfg.colour || COLOURS[0] })
-	X.cmd = async (c) => {
+	X.cmd = async (c, quiet = false) => {
 		try {
 			const r = await fetch(X.base + '/cmd', { method: 'POST', body: JSON.stringify(c), headers: X.hdr({ 'Content-Type': 'application/json' }) })
 			if (r.status === 401) return pinRejected(X)
 			const j = await r.json()
 			if (!j.ok) flash((home ? '' : X.name + ': ') + (j.error || "That didn't work"))
-			else if (j.message) flash(j.message)
+			else if (j.message && !quiet) flash(j.message)
 			return j
 		} catch { flash(home ? 'Lost touch with the module' : `Lost touch with ${X.name}`) }
 	}
@@ -1392,7 +1394,7 @@ function wireRecFiles(body) {
 	$$('[data-up]', body).forEach((b) => b.onclick = () => recCmd({ cmd: 'recUploadFile', name: b.dataset.up }))
 	$$('[data-del]', body).forEach((b) => b.onclick = async () => {
 		const name = b.dataset.del
-		const ask = await X.cmd({ cmd: 'recDeleteAsk', name })
+		const ask = await X.cmd({ cmd: 'recDeleteAsk', name }, true)
 		if (!ask || !ask.ok) return
 		const { token } = JSON.parse(ask.message)
 		dialog('DELETE', `<h3>Are you sure?</h3><p>Delete <b>${esc(name)}</b> for good? There's no undo, and no bin to fish it out of.</p><div class="btns"><button class="primary" id="dGo" style="background:var(--red);border-color:var(--red)">Yes, delete it</button><button id="dNo">No, keep it</button></div>`, (d) => {
@@ -1473,7 +1475,7 @@ let pvTimer = null
 function namingPreview() {
 	clearTimeout(pvTimer)
 	pvTimer = setTimeout(async () => {
-		const j = await recX().cmd({ cmd: 'recPreview', naming: recDraft })
+		const j = await recX().cmd({ cmd: 'recPreview', naming: recDraft }, true)
 		const el = $('#nPv')
 		if (el && j && j.ok) el.textContent = j.message || '(blank)'
 	}, 150)
