@@ -1,0 +1,25 @@
+{
+	"name": "rebel-audio-core",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"description": "The shared engine of the Rebels' Companion audio modules (OBS Audio, ATEM Audio). Source only: modules include it as a git submodule at core/ and bundle it themselves. This file is for the core's own type check and tests.",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/nisted/rebel-audio-core.git"
+	},
+	"scripts": {
+		"check-types": "node scripts/embed-page.mjs && tsc -p tsconfig.json --noEmit",
+		"test": "node scripts/test.mjs"
+	},
+	"engines": {
+		"node": "^22.20"
+	},
+	"devDependencies": {
+		"@types/node": "^22.15.18",
+		"esbuild": "^0.25.0",
+		"typescript": "~5.9.3"
+	},
+	"packageManager": "yarn@4.13.0"
+}

@@ -1,0 +1,1082 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>%APP_NAME%</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Look: Murasaki cockpit (dark, purple bars, chamfered panels, cyan readouts). Values are cyan; buttons are never blue. */
+:root {
+	--bg: #06070b; --surface: #0b0c12; --panel: #10111a; --line: #2a2340; --fg: #dfe2ee; --muted: #9aa0b4;
+	--bar: #5a12b4; --hi: #7a2fe0; --on: #b98cff; --ink: #120a22; --val: #5cd8f5;
+	--red: #ff5a4a; --amber: #ffa23e; --green: #4fe07a;
+	--body: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace; --head: "Archivo", "Arial Narrow", system-ui, sans-serif;
+}
+* { box-sizing: border-box; border-radius: 0; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 13px/1.3 var(--body); overflow: hidden; }
+body { display: flex; flex-direction: column; background-image: repeating-linear-gradient(0deg, transparent 0 3px, rgb(255 255 255 / .018) 3px 4px); }
+button, select, input { font: inherit; color: inherit; }
+button { background: var(--surface); border: 1px solid var(--line); color: var(--on); font-family: var(--head); font-weight: 700; letter-spacing: .05em; text-transform: uppercase; font-size: 11px; padding: 5px 8px; cursor: pointer; touch-action: manipulation; }
+button:hover { border-color: var(--on); }
+button.on { background: var(--on); color: var(--ink); border-color: var(--on); }
+button.mute.on { background: var(--red); color: #fff; border-color: var(--red); }
+button.pfl.on { background: var(--green); color: var(--ink); border-color: var(--green); }
+button.solo.on { background: var(--amber); color: var(--ink); border-color: var(--amber); }
+button.rec.on { background: var(--red); color: #fff; border-color: var(--red); }
+button.primary { background: var(--bar); border-color: var(--hi); color: #f3ecff; clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px)); }
+button.primary:hover { background: var(--hi); }
+button:disabled { opacity: .4; cursor: default; }
+select, input[type=number], input[type=text], input[type=time], input[type=date] { background: var(--bg); border: 1px solid var(--line); padding: 3px 5px; min-width: 0; color: var(--fg); }
+a { color: var(--val); }
+.val { color: var(--val); font-variant-numeric: tabular-nums; }
+.lbl { color: var(--muted); text-transform: uppercase; letter-spacing: .07em; font-size: 10px; }
+
+/* top bar */
+header { display: flex; align-items: stretch; height: 40px; border-bottom: 2px solid var(--hi); background: var(--bg); flex: 0 0 auto; }
+.brand { display: flex; align-items: center; gap: 8px; padding: 0 30px 0 12px; background: var(--bar); clip-path: polygon(0 0, 100% 0, calc(100% - 22px) 100%, 0 100%); font-family: var(--head); font-weight: 800; letter-spacing: .05em; color: #f3ecff; white-space: nowrap; }
+.led { width: 10px; height: 10px; background: var(--red); display: inline-block; }
+.led.ok { background: var(--green); }
+.hbar { display: flex; align-items: center; gap: 6px; padding: 0 8px; overflow-x: auto; flex: 1; scrollbar-width: none; }
+.hbar::-webkit-scrollbar { display: none; }
+.hbar > * { flex: none; }
+.hsep { width: 1px; align-self: stretch; background: var(--line); margin: 6px 2px; }
+.next { color: var(--val); white-space: nowrap; }
+.clock { color: var(--val); font-variant-numeric: tabular-nums; padding: 0 10px; align-self: center; }
+#msg { color: var(--amber); font-size: 12px; }
+.chk { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+.chk input { accent-color: var(--hi); }
+
+/* strips */
+main { flex: 1; overflow: auto; padding: 8px; min-height: 0; }
+#strips { display: flex; gap: 8px; height: 100%; align-items: stretch; }
+#strips.rows { flex-direction: column; height: auto; }
+.empty { color: var(--muted); padding: 30px; text-align: center; }
+.strip { position: relative; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); flex: 0 0 auto; min-height: 0; width: 340px; clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px)); }
+.strip .name { flex: 0 0 auto; padding: 5px 10px; background: color-mix(in srgb, var(--bar) 55%, var(--bg)); font-family: var(--head); font-weight: 800; letter-spacing: .04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; gap: 6px; align-items: center; }
+.strip .name .tag { font-family: var(--body); font-weight: 500; font-size: 10px; color: var(--amber); border: 1px solid var(--amber); padding: 0 4px; }
+.cols { flex: 1; display: flex; min-height: 0; }
+.col { min-height: 0; }
+.fmcol { flex: 0 0 auto; display: flex; flex-direction: column; border-right: 1px solid var(--line); padding: 6px; gap: 6px; }
+.setcol { position: relative; flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
+.advcol { flex: 0 0 auto; width: 260px; border-left: 1px solid var(--line); position: relative; display: none; }
+.strip.pinned .advcol { display: flex; flex-direction: column; }
+.tog { display: flex; gap: 3px; }
+.tog button { flex: 1; padding: 3px 4px; font-size: 10px; }
+.fm { flex: 1; display: flex; gap: 6px; min-height: 120px; justify-content: center; }
+.meters { display: flex; gap: 4px; }
+.meter { position: relative; width: 18px; display: flex; gap: 2px; padding: 10px 0; height: 100%; }
+.meter .ch { position: relative; flex: 1; background: #030305; overflow: hidden; }
+.meter .bar { position: absolute; inset: 0; clip-path: inset(100% 0 0 0); }
+.meter .pk { position: absolute; left: 0; right: 0; height: 2px; background: #fff; bottom: 0; }
+.meter .band { position: absolute; left: -2px; right: -2px; opacity: .45; pointer-events: none; }
+.meter .tgt { position: absolute; left: -3px; right: -3px; height: 2px; pointer-events: none; }
+.meter.gr .ch { background: #030305; }
+.meter.gr .bar { inset: 0 0 auto 0; clip-path: none; height: 0; background: var(--amber); }
+.meter .mlbl { position: absolute; font-size: 8px; color: var(--muted); left: 50%; transform: translateX(-50%); bottom: -1px; }
+.mscale { position: relative; width: 22px; margin: 10px 4px 10px 0; font-size: 9px; color: var(--muted); }
+.mscale span { position: absolute; right: 0; transform: translateY(50%); }
+.fader { position: relative; width: 46px; height: 100%; touch-action: none; cursor: ns-resize; }
+.fader .track { position: absolute; left: 50%; top: 10px; bottom: 10px; width: 6px; transform: translateX(-50%); background: #000; border: 1px solid var(--line); }
+.fader .scale { position: absolute; inset: 10px 0; pointer-events: none; }
+.fader .tick { position: absolute; left: 0; right: 0; height: 1px; background: #2a2340; }
+.fader .tick span { position: absolute; left: 0; font-size: 9px; color: var(--muted); transform: translateY(-50%); }
+.fader .cap { position: absolute; left: 3px; right: 3px; height: 26px; margin-top: -13px; background: linear-gradient(#2c2045, #120c20); border: 1px solid var(--on); box-shadow: 0 2px 6px #000a; }
+.fader .cap::after { content: ''; position: absolute; left: 3px; right: 3px; top: 50%; height: 2px; background: #fff; }
+.fader.fine .cap { border-color: var(--amber); }
+.readout { display: flex; justify-content: space-between; gap: 4px; font-size: 12px; }
+.rstate { font-size: 10px; padding: 0 4px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.rstate.riding { color: var(--val); } .rstate.limit { color: var(--amber); } .rstate.capturing, .rstate.calibrating { color: var(--on); }
+.bottom { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3px; }
+.bottom button { padding: 7px 2px; }
+
+/* settings column */
+.basic { padding: 6px 8px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 5px; flex: 0 0 auto; }
+.basic .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
+.basic .stat { display: flex; justify-content: space-between; gap: 6px; align-items: center; }
+.sections { flex: 1; overflow-y: auto; min-height: 0; }
+.sec { border-bottom: 1px solid var(--line); }
+.sec h3 { margin: 0; font: 800 10px/1 var(--head); text-transform: uppercase; letter-spacing: .12em; color: var(--muted); padding: 7px 8px; display: flex; justify-content: space-between; }
+.sec.collapsible h3 { cursor: pointer; }
+.sec.collapsible h3::after { content: '▾'; }
+.sec.collapsed h3::after { content: '▸'; }
+.sec.collapsed .body { display: none; }
+.sec .body { padding: 2px 8px 8px; display: flex; flex-direction: column; gap: 6px; }
+.row { display: flex; align-items: center; gap: 5px; justify-content: space-between; }
+.row > .lbl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row select, .row input[type=number], .row input[type=text] { width: 96px; }
+.knobs { display: flex; flex-wrap: wrap; gap: 4px 2px; }
+.filter { border: 1px solid var(--line); padding: 4px 5px; display: flex; flex-direction: column; gap: 4px; }
+.filter .fhead { display: flex; gap: 4px; align-items: center; }
+.filter .fhead span { flex: 1; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.filter.off .knobs, .filter.off .row { opacity: .5; }
+.small { font-size: 10px; padding: 2px 5px; }
+.tracks { display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; }
+.tracks button { padding: 5px 0; }
+.addf { width: 100%; }
+.ovr { color: var(--on) !important; }
+.reset { background: none; border: 0; color: var(--on); padding: 0 2px; }
+
+/* knob */
+.knob { width: 62px; display: flex; flex-direction: column; align-items: center; gap: 1px; user-select: none; touch-action: none; }
+.knob svg { width: 40px; height: 40px; cursor: ns-resize; }
+.knob .kl { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; text-align: center; line-height: 1.1; max-width: 62px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.knob .kv { font-size: 10px; color: var(--val); font-variant-numeric: tabular-nums; cursor: text; }
+
+/* advanced auto gain */
+.adv { position: absolute; inset: 0; background: var(--panel); z-index: 3; display: none; flex-direction: column; border-top: 2px solid var(--hi); }
+.adv.open { display: flex; }
+.strip.pinned .setcol .adv { display: none !important; }
+.strip.pinned .advcol .adv { display: flex; position: static; flex: 1; border-top: 0; min-height: 0; }
+.adv .ahead { display: flex; gap: 4px; align-items: center; padding: 5px 8px; border-bottom: 1px solid var(--line); }
+.adv .ahead b { flex: 1; font: 800 11px var(--head); letter-spacing: .08em; color: var(--on); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.adv .abody { overflow-y: auto; padding: 6px 8px; display: flex; flex-direction: column; gap: 5px; min-height: 0; }
+.adv .row select, .adv .row input[type=number], .adv .row input[type=text] { width: 78px; flex: none; }
+.adv h4 { margin: 6px 0 0; font: 800 10px var(--head); letter-spacing: .1em; color: var(--muted); text-transform: uppercase; border-bottom: 1px solid var(--line); padding-bottom: 2px; }
+
+/* strip resize */
+.grip { position: absolute; right: 0; top: 0; bottom: 0; width: 7px; cursor: ew-resize; z-index: 4; }
+.grip:hover, .grip.drag { background: color-mix(in srgb, var(--hi) 40%, transparent); }
+
+/* rows layout (one input per row; wraps on narrow screens such as an OBS dock) */
+.rows .strip { width: auto !important; clip-path: none; }
+.rows .cols { flex-wrap: wrap; }
+.rows .fmcol { flex: 1 1 340px; flex-direction: row; align-items: center; border-right: 0; }
+.rows .tog { flex-direction: column; }
+.rows .fm { flex-direction: column; min-height: 0; flex: 1; gap: 4px; }
+.rows .meters { flex-direction: column; gap: 3px; }
+.rows .meter { width: 100%; height: 14px; flex-direction: column; padding: 0 10px; }
+.rows .meter .pk { top: 0; bottom: auto; height: 100%; width: 2px; }
+.rows .meter .band { top: -2px; bottom: -2px; left: auto; right: auto; }
+.rows .meter .tgt { top: -3px; bottom: -3px; width: 2px; height: auto; left: auto; right: auto; }
+.rows .meter .mlbl, .rows .mscale { display: none; }
+.rows .fader { width: 100%; height: 40px; cursor: ew-resize; }
+.rows .fader .track { left: 10px; right: 10px; top: 50%; bottom: auto; height: 6px; width: auto; transform: translateY(-50%); }
+.rows .fader .scale { inset: 0 10px; }
+.rows .fader .tick { top: 0; bottom: 0; width: 1px; height: auto; right: auto; }
+.rows .fader .tick span { top: auto; bottom: -2px; transform: translateX(-50%); }
+.rows .fader .cap { top: 3px; bottom: 3px; width: 22px; height: auto; margin: 0 0 0 -11px; right: auto; }
+.rows .fader .cap::after { top: 3px; bottom: 3px; left: 50%; width: 2px; height: auto; right: auto; }
+.rows .readout { flex-direction: column; min-width: 64px; }
+.rows .bottom { grid-template-columns: 1fr; width: 60px; }
+.rows .setcol { flex: 1 1 280px; border-top: 1px solid var(--line); }
+.rows .sections { overflow: visible; }
+.rows .adv { position: static; }
+.rows .advcol { flex: 1 1 100%; width: auto; border-left: 0; }
+.rows .grip { display: none; }
+
+/* floating panels (never block the page) */
+.float { position: fixed; z-index: 20; background: var(--surface); border: 1px solid var(--hi); box-shadow: 0 10px 30px #000c; display: flex; flex-direction: column; }
+#settings { width: min(780px, calc(100vw - 16px)); height: min(620px, calc(100vh - 60px)); left: 40px; top: 50px; display: none; }
+#settings.open { display: flex; }
+.fhead2 { display: flex; align-items: center; gap: 6px; padding: 0 0 0 10px; background: var(--bar); color: #f3ecff; cursor: move; height: 30px; flex: 0 0 auto; font: 800 12px var(--head); letter-spacing: .08em; }
+.fhead2 span { flex: 1; }
+.fhead2 button { height: 30px; border: 0; background: transparent; color: #f3ecff; }
+.tabs { display: flex; gap: 3px; padding: 6px; border-bottom: 1px solid var(--line); flex: 0 0 auto; flex-wrap: wrap; }
+.tabs button { padding: 5px 8px; }
+.sbody { flex: 1; overflow-y: auto; padding: 10px; min-height: 0; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 6px 16px; }
+.card { border: 1px solid var(--line); padding: 8px; margin-bottom: 8px; background: var(--panel); }
+.card h4 { margin: 0 0 6px; font: 800 11px var(--head); letter-spacing: .08em; text-transform: uppercase; color: var(--on); }
+.checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 2px 10px; }
+.checks label { display: flex; gap: 6px; align-items: center; }
+.help { color: var(--muted); font-size: 12px; }
+.btns { display: flex; gap: 4px; flex-wrap: wrap; }
+
+/* pop-ups */
+#notices { position: fixed; right: 10px; top: 50px; z-index: 30; display: flex; flex-direction: column; gap: 8px; width: min(380px, calc(100vw - 20px)); pointer-events: none; }
+.notice { pointer-events: auto; background: var(--surface); border: 1px solid var(--amber); border-left: 4px solid var(--amber); padding: 10px; box-shadow: 0 8px 24px #000c; }
+.notice h4 { margin: 0 0 4px; font: 800 13px var(--head); letter-spacing: .04em; color: var(--amber); }
+.notice p { margin: 0 0 8px; }
+.notice.big { border-color: var(--red); border-left-color: var(--red); }
+.notice.big h4 { color: var(--red); font-size: 22px; }
+.notice.big .go { font-size: 18px; padding: 12px; width: 100%; margin-bottom: 6px; }
+#tip { left: 10px; bottom: 10px; z-index: 25; width: min(360px, calc(100vw - 20px)); display: none; }
+#tip.open { display: flex; }
+#tip .tbody { padding: 10px; }
+#tooltip { position: fixed; z-index: 50; max-width: 300px; background: #000; border: 1px solid var(--hi); color: var(--fg); padding: 6px 8px; font-size: 12px; pointer-events: none; display: none; }
+#dlg { z-index: 40; left: 50%; top: 80px; transform: translateX(-50%); width: min(420px, calc(100vw - 20px)); display: none; }
+#dlg.open { display: flex; }
+#dlg .dbody { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+#dlg h3 { margin: 0; font: 800 16px var(--head); color: var(--fg); }
+</style>
+</head>
+<body>
+<header>
+	<div class="brand"><span class="led" id="led"></span>%APP_NAME_UPPER%</div>
+	<div class="hbar">
+		<button id="bRec" class="rec" data-tip="Starts recording. While recording, press to stop (it asks twice, just to be sure).">● REC</button>
+		<span class="val" id="recTime"></span>
+		<span class="next" id="next" data-tip="When the next recording is planned to start, and how long to go."></span>
+		<span class="hsep"></span>
+		<button id="bPfl" data-tip="PFL mode. ADDITIVE: PFL another channel and it joins what you're hearing. EXCLUSIVE: a new PFL cancels the others.">PFL ADD</button>
+		<label class="chk" data-tip="Solo latching. On: solo stays on until you press it again. Off: solo only while you hold it down."><input type="checkbox" id="cLatch">Solo latch</label>
+		<label class="chk" data-tip="When on, drag one strip's edge and every strip follows to the same width."><input type="checkbox" id="cMatch">Match widths</label>
+		<span id="msg"></span>
+		<span style="flex:1"></span>
+		<button id="upd" class="on" style="display:none" data-tip="Ooh, something new: a newer version of this module or the device's software is out. Press for details and download links."></button>
+		<button id="bTips" data-tip="Tip of the day. Go on, learn something.">TIPS</button>
+		<button id="bSettings" data-tip="Settings. Opens a floating panel you can drag out of the way; the strips keep working behind it.">⚙ SETTINGS</button>
+	</div>
+	<span class="clock" id="clock">--:--</span>
+</header>
+<main><div id="strips"></div><div class="empty" id="empty">Waiting for the desk… any second now.</div></main>
+
+<div id="settings" class="float">
+	<div class="fhead2" id="setHead"><span>SETTINGS</span><button id="setClose" data-tip="Close settings">✕</button></div>
+	<div class="tabs">
+		<button data-tab="page" class="on">Page</button>
+		<button data-tab="defaults">Auto gain defaults</button>
+		<button data-tab="buttons">Buttons</button>
+		<button data-tab="sections">Sections</button>
+		<button data-tab="inputs">Inputs</button>
+		<button data-tab="recording">Recording</button>
+		<button data-tab="io">Export / import</button>
+		<button data-tab="about">About</button>
+	</div>
+	<div class="sbody" id="sbody"></div>
+</div>
+<div id="notices"></div>
+<div id="tip" class="float"><div class="fhead2"><span>TIP</span><button id="tipNext" data-tip="Another one">NEXT</button><button id="tipClose">✕</button></div><div class="tbody"><p id="tipText"></p><label class="chk"><input type="checkbox" id="tipOnOpen"> Show a tip when the page opens</label></div></div>
+<div id="dlg" class="float"><div class="fhead2"><span id="dlgTitle">CONFIRM</span><button id="dlgX">✕</button></div><div class="dbody" id="dlgBody"></div></div>
+<div id="tooltip"></div>
+
+<script>
+'use strict'
+const $ = (s, el = document) => el.querySelector(s)
+const $$ = (s, el = document) => [...el.querySelectorAll(s)]
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
+let META = null
+let S = null
+const APP = '%APP_ID%'.replace(/[^a-z0-9]/gi, '')
+let pin = localStorage.getItem(APP + '.pin') || ''
+const dragging = new Set()
+const peaks = {}
+const strips = new Map()
+const LS = (k, d) => { try { const v = localStorage.getItem(APP + '.' + k); return v === null ? d : JSON.parse(v) } catch { return d } }
+const LSset = (k, v) => { try { localStorage.setItem(APP + '.' + k, JSON.stringify(v)) } catch {} }
+const collapsed = LS('collapsed', {})
+const perStrip = LS('strip', {}) // input id -> {pre, post, fine, width, pinned}
+let es = null
+let tab = 'page'
+
+function q() { return pin ? '?pin=' + encodeURIComponent(pin) : '' }
+function flash(text) { const m = $('#msg'); m.textContent = text; clearTimeout(flash.t); flash.t = setTimeout(() => (m.textContent = ''), 5000) }
+function ps(name) { return (perStrip[name] ??= {}) }
+function savePs() { LSset('strip', perStrip) }
+
+async function cmd(c) {
+	try {
+		const r = await fetch('/cmd' + q(), { method: 'POST', body: JSON.stringify(c), headers: { 'Content-Type': 'application/json' } })
+		if (r.status === 401) return askPin()
+		const j = await r.json()
+		if (!j.ok) flash(j.error || 'That didn\'t work')
+		else if (j.message) flash(j.message)
+		return j
+	} catch { flash('Lost touch with the module') }
+}
+
+function askPin() {
+	const p = prompt('This page has a PIN. What is it?')
+	if (p === null) return
+	pin = p
+	localStorage.setItem(APP + '.pin', pin)
+	connect()
+}
+
+// ---- fader law (same as the core's law.ts) ----
+const MIN_DB = -100
+const MARKS = [[0.03, -80], [0.08, -60], [0.15, -50], [0.25, -40], [0.35, -30], [0.45, -20], [0.55, -12], [0.65, -6], [0.75, 0]]
+function law() { const p = S.store.page; return { kind: p.law, top: p.faderTopDb, bottom: p.faderBottomDb } }
+function posToDb(pos) {
+	const L = law(), p = Math.max(0, Math.min(1, pos))
+	if (p <= 0) return null
+	if (L.kind === 'linear') return L.bottom + (L.top - L.bottom) * p
+	if (p >= 0.75) return L.top <= 0 ? 0 : ((p - 0.75) / 0.25) * L.top
+	if (p < MARKS[0][0]) return MIN_DB + ((MARKS[0][1] - MIN_DB) * p) / MARKS[0][0]
+	for (let i = 1; i < MARKS.length; i++) { const [p1, d1] = MARKS[i], [p0, d0] = MARKS[i - 1]; if (p <= p1) return d0 + ((d1 - d0) * (p - p0)) / (p1 - p0) }
+	return 0
+}
+function dbToPos(db) {
+	const L = law()
+	if (db === null || db <= MIN_DB) return 0
+	if (L.kind === 'linear') return db <= L.bottom ? 0 : Math.max(0, Math.min(1, (db - L.bottom) / (L.top - L.bottom)))
+	if (db >= 0) return L.top <= 0 ? 0.75 : Math.min(1, 0.75 + (db / L.top) * 0.25)
+	if (db <= MARKS[0][1]) return Math.max(0, ((db - MIN_DB) / (MARKS[0][1] - MIN_DB)) * MARKS[0][0])
+	for (let i = 1; i < MARKS.length; i++) { const [p1, d1] = MARKS[i], [pa, da] = MARKS[i - 1]; if (db <= d1) return pa + ((p1 - pa) * (db - da)) / (d1 - da) }
+	return 0.75
+}
+const fmt = (db, d = 1) => (db === null || db === undefined ? '-∞' : (db > 0 ? '+' : '') + Number(db).toFixed(d))
+function mFrac(db) { const p = S.store.page; if (db === null || db === undefined) return 0; return Math.max(0, Math.min(1, (db - p.meterFloorDb) / (p.meterTopDb - p.meterFloorDb))) }
+function zoneGradient(rows) {
+	const p = S.store.page
+	const g = mFrac(p.greenToDb) * 100, y = mFrac(p.yellowToDb) * 100
+	return `linear-gradient(${rows ? 'to right' : 'to top'}, ${p.greenColour} 0%, ${p.greenColour} ${g}%, ${p.yellowColour} ${g}%, ${p.yellowColour} ${y}%, ${p.redColour} ${y}%, ${p.redColour} 100%)`
+}
+
+// ---- tooltips (a setting can turn them off) ----
+const tt = $('#tooltip')
+let ttTimer = null
+document.addEventListener('mouseover', (e) => {
+	const el = e.target.closest('[data-tip]')
+	clearTimeout(ttTimer)
+	tt.style.display = 'none'
+	if (!el || !el.dataset.tip || !S || !S.store.page.tooltips) return
+	ttTimer = setTimeout(() => {
+		tt.textContent = el.dataset.tip
+		tt.style.display = 'block'
+		const r = el.getBoundingClientRect()
+		const w = tt.offsetWidth, h = tt.offsetHeight
+		tt.style.left = Math.max(4, Math.min(innerWidth - w - 4, r.left)) + 'px'
+		tt.style.top = (r.bottom + h + 8 > innerHeight ? r.top - h - 6 : r.bottom + 6) + 'px'
+	}, 450)
+})
+document.addEventListener('pointerdown', () => { clearTimeout(ttTimer); tt.style.display = 'none' })
+
+// ---- live feed ----
+function connect() {
+	if (es) es.close()
+	es = new EventSource('/events' + q())
+	es.addEventListener('meta', (e) => { META = JSON.parse(e.data) })
+	es.addEventListener('state', (e) => { const first = !S; S = JSON.parse(e.data); render(); if (first) firstOpen() })
+	es.addEventListener('meters', (e) => drawMeters(JSON.parse(e.data)))
+	es.onerror = async () => {
+		$('#led').classList.remove('ok')
+		try { const r = await fetch('/events' + q(), { method: 'HEAD' }); if (r.status === 401) { es.close(); askPin() } } catch {}
+	}
+}
+
+setInterval(() => { $('#clock').textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }); tickNext() }, 1000)
+
+// ---- header ----
+function renderHeader() {
+	$('#led').classList.toggle('ok', S.connected)
+	$('#led').parentElement.dataset.tip = S.connected ? `Connected to ${META.device.label}. All good.` : (S.deviceError || `Not connected to ${META.device.label}`)
+	const r = S.recording
+	$('#bRec').style.display = r.available ? '' : 'none'
+	$('#bRec').classList.toggle('on', r.active)
+	$('#bRec').textContent = r.active ? (r.paused ? '❚❚ PAUSED' : '■ STOP REC') : '● REC'
+	$('#recTime').textContent = r.active ? (r.timecode || '').split('.')[0] : ''
+	$('#bPfl').textContent = S.store.page.pflMode === 'exclusive' ? 'PFL EXCL' : 'PFL ADD'
+	$('#cLatch').checked = S.store.page.soloLatch
+	$('#cMatch').checked = LS('match', false)
+	const V = S.versions || {}
+	const upd = [V.moduleUpdate && 'MODULE ' + V.moduleLatest, V.deviceUpdate && (V.deviceLabel || '').toUpperCase() + ' ' + V.deviceLatest].filter(Boolean)
+	$('#upd').style.display = upd.length ? '' : 'none'
+	$('#upd').textContent = 'UPDATE: ' + upd.join(', ')
+	tickNext()
+}
+function tickNext() {
+	if (!S) return
+	const plan = S.recording.plan
+	const el = $('#next')
+	if (!plan.nextStart || S.recording.active) { el.textContent = ''; return }
+	const t = new Date(plan.nextStart)
+	const s = Math.round((t - Date.now()) / 1000)
+	const a = Math.abs(s), hh = Math.floor(a / 3600), mm = Math.floor((a % 3600) / 60), ss = a % 60
+	const cd = (s < 0 ? '-' : '') + (hh ? hh + ':' : '') + String(mm).padStart(2, '0') + ':' + String(ss).padStart(2, '0')
+	el.textContent = `NEXT REC ${t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}${plan.autoStart ? ' AUTO' : ''} · ${cd}`
+}
+$('#bPfl').onclick = () => cmd({ cmd: 'page', key: 'pflMode', value: S.store.page.pflMode === 'exclusive' ? 'additive' : 'exclusive' })
+$('#cLatch').onchange = (e) => cmd({ cmd: 'page', key: 'soloLatch', value: e.target.checked })
+$('#cMatch').onchange = (e) => { LSset('match', e.target.checked); if (e.target.checked) { const w = Math.max(...S.inputs.map((i) => ps(i.id).width || 340)); for (const i of S.inputs) ps(i.id).width = w; savePs(); render() } }
+$('#bRec').onclick = () => (S.recording.active ? stopFlow() : cmd({ cmd: 'recordStart' }))
+$('#upd').onclick = () => openSettings('about')
+$('#bSettings').onclick = () => ($('#settings').classList.contains('open') ? $('#settings').classList.remove('open') : openSettings(tab))
+$('#setClose').onclick = () => $('#settings').classList.remove('open')
+
+// ---- small floating dialog (doesn't block the page) ----
+function dialog(title, html, wire) {
+	$('#dlgTitle').textContent = title
+	$('#dlgBody').innerHTML = html
+	$('#dlg').classList.add('open')
+	wire($('#dlgBody'))
+}
+const closeDialog = () => $('#dlg').classList.remove('open')
+$('#dlgX').onclick = closeDialog
+
+function stopFlow() {
+	dialog('STOP RECORDING', `<h3>Stop recording?</h3><div class="btns"><button class="primary" id="s1">Stop</button><button id="sc">Cancel</button></div>`, (b) => {
+		$('#sc', b).onclick = closeDialog
+		$('#s1', b).onclick = () => dialog('STOP RECORDING', `<h3>Are you definitely sure?</h3><p class="help">You\'ve got ${esc((S.recording.timecode || '').split('.')[0])} in the can so far.</p><div class="btns"><button class="primary" id="s2">Yes, I'm definitely sure</button><button id="sc">Cancel</button></div>`, (b2) => {
+			$('#sc', b2).onclick = closeDialog
+			$('#s2', b2).onclick = async () => { await cmd({ cmd: 'recordStop' }); planFlow() }
+		})
+	})
+}
+
+function planFlow(title = 'RECORDING STOPPED') {
+	const d = new Date()
+	const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+	dialog(title, `<h3>When is recording due to restart?</h3>
+		<div class="row"><span class="lbl">Date</span><input type="date" id="pd" value="${today}"></div>
+		<div class="row"><span class="lbl">Time</span><input type="time" id="pt"></div>
+		<label class="chk"><input type="checkbox" id="pa"> Start recording automatically at that time</label>
+		<p class="help">If it's not starting automatically, I'll pop up a "Start recording?" reminder ${S.store.page.recordLeadMin} minutes before.</p>
+		<div class="btns"><button class="primary" id="pset">Set</button><button id="pskip">Skip (stay stopped)</button></div>`, (b) => {
+		$('#pskip', b).onclick = () => { cmd({ cmd: 'recordPlan', nextStart: null }); closeDialog() }
+		$('#pset', b).onclick = () => {
+			const t = $('#pt', b).value
+			if (!t) return flash('Pick a time first, or press Skip')
+			const when = new Date(`${$('#pd', b).value}T${t}:00`)
+			cmd({ cmd: 'recordPlan', nextStart: when.toISOString(), autoStart: $('#pa', b).checked })
+			closeDialog()
+		}
+	})
+}
+
+// ---- pop-ups from the module ----
+let noticeSig = ''
+function renderNotices() {
+	const sig = JSON.stringify(S.notices || [])
+	if (sig === noticeSig) return
+	noticeSig = sig
+	const box = $('#notices')
+	box.innerHTML = (S.notices || []).map((n) => {
+		const big = n.kind === 'record-due'
+		const btns = n.actions.map((a, i) => `<button class="${big && i === 0 ? 'primary go' : i === 0 ? 'primary' : ''}" data-n="${n.id}" data-a="${a.id}">${esc(a.label)}</button>`).join('')
+		return `<div class="notice ${big ? 'big' : ''}"><h4>${esc(n.title)}</h4><p>${esc(n.message)}</p><div class="btns">${btns}</div></div>`
+	}).join('')
+	$$('[data-n]', box).forEach((b) => b.onclick = () => {
+		if (b.dataset.a === 'newtime') { cmd({ cmd: 'notice', id: b.dataset.n, action: 'dismiss' }); planFlow('NEW START TIME') }
+		else cmd({ cmd: 'notice', id: b.dataset.n, action: b.dataset.a })
+	})
+}
+
+// ---- tip of the day ----
+const TIPS = [
+	'Input sounding lovely? Press "This level". Auto level keeps it there, and leaves it alone while it stays inside the band.',
+	'On a Stream Deck, the auto gain button preset is three buttons in one: press = this level, double tap = calibrate to the input\'s level, press and hold = calibrate to the module level.',
+	'For small moves, drag a fader with two fingers, or switch FINE on for the strip. Double tap a fader for 0 dB.',
+	'Knobs go up and down, not round and round. Hold Shift for fine steps, double click to reset, click the value to type one.',
+	'Solo lets you hear just one input on monitoring. Let go and every PFL goes back to how it was. It never touches the recording.',
+	'Got a spare mic on the presenter? Make it the backup (Input section → Backup for). With auto switch on (Show advanced → Backup feed) it crossfades to the backup if the main drops out, and never switches back by itself.',
+	'Stopping a recording asks twice (no accidents here), then asks when it\'s due to restart. Set a time and a countdown appears in the top bar.',
+	'Settings float. Drag them by the title bar out of the way and carry on with the strips.',
+	'Drag a strip\'s right edge to make it wider. Tick Match widths to size them all together.',
+	'Show advanced opens every auto gain setting over the channel settings. Pin it to keep it as its own column.',
+	'Moving to another machine? Export your settings from Settings → Export / import. On import you choose which parts to take, and the old settings are kept as an autosave.',
+	'Hover over anything for a tooltip. Know it all already? Turn them off in Settings → Page.',
+	'With auto level moving the fader, a Grid fader latched to that input lets go each time. Ride the trim instead and you keep both.',
+	'The PRE meter is before the fader. POST is what goes out.',
+]
+const allTips = () => [...TIPS, ...((META && META.tips) || [])]
+let tipN = LS('tipN', 0)
+function showTip() {
+	const T = allTips()
+	$('#tipText').textContent = T[tipN % T.length]
+	$('#tipOnOpen').checked = S.store.page.tipsOnOpen
+	$('#tip').classList.add('open')
+}
+$('#bTips').onclick = () => { tipN++; LSset('tipN', tipN); showTip() }
+$('#tipNext').onclick = () => { tipN++; LSset('tipN', tipN); showTip() }
+$('#tipClose').onclick = () => $('#tip').classList.remove('open')
+$('#tipOnOpen').onchange = (e) => cmd({ cmd: 'page', key: 'tipsOnOpen', value: e.target.checked })
+function firstOpen() { if (S.store.page.tipsOnOpen) { tipN++; LSset('tipN', tipN); showTip() } }
+
+// ---- knob ----
+function knobSvg(value, min, max) {
+	const f = Math.max(0, Math.min(1, (value - min) / (max - min)))
+	const a = -135 + f * 270
+	const pt = (ang, r) => { const t = ((ang - 90) * Math.PI) / 180; return [(20 + r * Math.cos(t)).toFixed(2), (20 + r * Math.sin(t)).toFixed(2)] }
+	const arc = (from, to, r) => { const [x1, y1] = pt(from, r), [x2, y2] = pt(to, r); return `M${x1},${y1} A${r},${r} 0 ${to - from > 180 ? 1 : 0} 1 ${x2},${y2}` }
+	const [px, py] = pt(a, 12)
+	return `<svg viewBox="0 0 40 40"><path d="${arc(-135, 135, 16)}" stroke="#2a2340" stroke-width="4" fill="none"/>${f > 0.002 ? `<path d="${arc(-135, a, 16)}" stroke="#7a2fe0" stroke-width="4" fill="none"/>` : ''}<circle cx="20" cy="20" r="11" fill="#14101f" stroke="#3a2d57"/><line x1="20" y1="20" x2="${px}" y2="${py}" stroke="#b98cff" stroke-width="2.5"/></svg>`
+}
+function knob({ label, value, min, max, step = 1, def, unit = '', tip = '', key }) {
+	const d = step < 1 ? (step < 0.1 ? 2 : 1) : 0
+	return `<div class="knob" data-knob="${esc(key)}" data-min="${min}" data-max="${max}" data-step="${step}" data-def="${def ?? ''}" data-v="${value}" data-dec="${d}" data-unit="${esc(unit)}" data-tip="${esc(tip)}">${knobSvg(value, min, max)}<span class="kv">${Number(value).toFixed(d)}${unit ? ' ' + esc(unit) : ''}</span><span class="kl">${esc(label)}</span></div>`
+}
+function wireKnobs(root, onSet) {
+	$$('[data-knob]', root).forEach((k) => {
+		const min = +k.dataset.min, max = +k.dataset.max, step = +k.dataset.step, dec = +k.dataset.dec, unit = k.dataset.unit
+		let v = +k.dataset.v
+		const show = () => {
+			const tmp = document.createElement('div')
+			tmp.innerHTML = knobSvg(v, min, max)
+			$('svg', k).replaceWith($('svg', tmp))
+			$('.kv', k).textContent = v.toFixed(dec) + (unit ? ' ' + unit : '')
+			bind()
+		}
+		const send = throttle(() => onSet(k.dataset.knob, v), 50)
+		const setV = (nv) => { nv = Math.max(min, Math.min(max, Math.round(nv / step) * step)); if (Math.abs(nv - v) < step / 2) return; v = nv; k.dataset.v = v; show(); send() }
+		const bind = () => {
+			const svg = $('svg', k)
+			svg.addEventListener('pointerdown', (e) => {
+				e.preventDefault(); k.classList.add('active')
+				let y = e.clientY, acc = v
+				const mv = (ev) => { const dy = y - ev.clientY; y = ev.clientY; acc = Math.max(min, Math.min(max, acc + (dy * (max - min)) / (ev.shiftKey ? 1200 : 200))); setV(acc) }
+				const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); k.classList.remove('active') }
+				addEventListener('pointermove', mv); addEventListener('pointerup', up)
+			})
+			svg.addEventListener('wheel', (e) => { e.preventDefault(); setV(v + (e.deltaY < 0 ? step : -step) * (e.shiftKey ? 1 : 5)) }, { passive: false })
+			svg.addEventListener('dblclick', () => { if (k.dataset.def !== '') setV(+k.dataset.def) })
+		}
+		bind()
+		$('.kv', k).addEventListener('click', () => { const t = prompt(`${$('.kl', k).textContent} (${min} to ${max})`, String(v)); if (t !== null && t.trim() !== '' && !isNaN(+t)) setV(+t) })
+	})
+}
+
+// ---- rendering ----
+function sectionMode(inp, sec) { return inp.sections[sec.id] || sec.mode }
+
+function render() {
+	if (!S || !META) return
+	renderHeader()
+	renderNotices()
+	const rows = S.store.page.layout === 'rows'
+	const box = $('#strips')
+	box.classList.toggle('rows', rows)
+	const list = S.inputs.filter((i) => !i.hidden)
+	$('#empty').style.display = list.length ? 'none' : ''
+	$('#empty').textContent = S.connected ? `No audio inputs on ${META.device.label}` : (S.deviceError || `Waiting for ${META.device.label}…`)
+	const names = new Set(list.map((i) => i.id))
+	for (const [n, s] of strips) if (!names.has(n)) { s.el.remove(); strips.delete(n) }
+	let prev = null
+	for (const inp of list) {
+		let s = strips.get(inp.id)
+		const st = ps(inp.id)
+		const layoutSig = JSON.stringify([rows, st.pre ?? S.store.page.showPre, st.post ?? S.store.page.showPost, !!st.pinned, inp.channels, inp.caps, grKinds(inp), S.store.page])
+		if (!s || s.layoutSig !== layoutSig) {
+			const el = buildStrip(inp, rows)
+			if (s) s.el.replaceWith(el)
+			s = { el, sig: '', layoutSig }
+			strips.set(inp.id, s)
+		}
+		if (prev ? prev.nextSibling !== s.el : box.firstChild !== s.el) box.insertBefore(s.el, prev ? prev.nextSibling : box.firstChild)
+		prev = s.el
+		if (!rows) s.el.style.width = (st.width || 340) + (st.pinned ? 260 : 0) + 'px'
+		updateStrip(s, inp)
+	}
+	if ($('#settings').classList.contains('open')) renderSettings(false)
+}
+
+/** Blocks on this input that report gain reduction, shown as GR meters */
+function grKinds(inp) { const gk = new Set(META.processing.filter((k) => k.gainReduction).map((k) => k.kind)); return inp.blocks.filter((b) => gk.has(b.kind)).map((b) => b.id) }
+
+function buildStrip(inp, rows) {
+	const st = ps(inp.id)
+	const pre = inp.caps.preMeter !== false && (st.pre ?? S.store.page.showPre), post = st.post ?? S.store.page.showPost
+	const el = document.createElement('div')
+	el.className = 'strip' + (st.pinned ? ' pinned' : '')
+	el.dataset.id = inp.id
+	const meterHtml = (cls, label) => `<div class="meter ${cls}" data-tip="${cls === 'pre' ? 'PRE: what\'s coming in, before the fader (peaks)' : 'POST: the level after the fader, as recorded'}"><span class="mlbl">${label}</span>${Array.from({ length: Math.max(1, Math.min(inp.channels, 8)) }, () => `<div class="ch"><div class="bar"></div><div class="pk"></div></div>`).join('')}<div class="band"></div><div class="tgt"></div></div>`
+	el.innerHTML = `<div class="name"></div>
+		<div class="cols">
+			<div class="col fmcol">
+				<div class="tog">${inp.caps.preMeter === false ? '' : `<button class="${pre ? 'on' : ''}" data-t="pre" data-tip="Shows the pre-fader meter on this strip">PRE</button>`}<button class="${post ? 'on' : ''}" data-t="post" data-tip="Shows the post-fader meter on this strip">POST</button><button class="${st.fine ? 'on' : ''}" data-t="fine" data-tip="Fine: small fader moves on this strip (two fingers do the same trick)">FINE</button></div>
+				<div class="fm"><div class="meters">${pre ? meterHtml('pre', 'PRE') : ''}${post ? meterHtml('post', 'POST') : ''}${grKinds(inp).map((b) => `<div class="meter gr" data-gr="${esc(b)}" data-tip="Gain reduction: ${esc(b)}"><span class="mlbl">GR</span><div class="ch"><div class="bar"></div></div></div>`).join('')}</div>${pre || post ? `<div class="mscale" data-tip="Meter scale (dB)">${[0, -6, -12, -18, -24, -36, -48].filter((d) => d <= S.store.page.meterTopDb && d > S.store.page.meterFloorDb).map((d) => `<span style="bottom:${mFrac(d) * 100}%">${d}</span>`).join('')}</div>` : ''}<div class="fader" data-tip="The fader. Drag to move; double tap for 0 dB."><div class="track"></div><div class="scale"></div><div class="cap"></div></div></div>
+				<div class="readout"><span class="val vol"></span><span class="rstate"></span><span class="val lvl" data-tip="The level auto level is listening to right now"></span></div>
+				<div class="bottom">${inp.caps.mute ? '<button class="mute" data-a="mute" data-tip="Mute: cuts this input from the output and the recording">MUTE</button>' : '<span></span>'}${inp.caps.monitor ? `<button class="pfl" data-a="pfl" data-tip="PFL: have a listen to this input on ${esc(META.device.label)}'s monitoring (headphones). The output and recording don't change.">PFL</button><button class="solo" data-a="solo" data-tip="Solo: hear only this input on monitoring while held (or until pressed again with Solo latch on). Never touches the output or the recording.">SOLO</button>` : ''}</div>
+			</div>
+			<div class="col setcol"><div class="basic"></div><div class="sections"></div><div class="adv"></div></div>
+			<div class="col advcol"><div class="adv"></div></div>
+		</div><div class="grip" data-tip="Drag to make this strip wider or narrower"></div>`
+	for (const bar of $$('.bar', el)) bar.style.background = zoneGradient(rows)
+	const scale = $('.scale', el)
+	for (const db of [10, 5, 0, -5, -10, -20, -30, -40, -60]) {
+		if (db > S.store.page.faderTopDb) continue
+		const p = dbToPos(db)
+		const t = document.createElement('div')
+		t.className = 'tick'
+		if (rows) t.style.left = p * 100 + '%'; else t.style.top = (1 - p) * 100 + '%'
+		t.innerHTML = `<span>${db > 0 ? '+' + db : db}</span>`
+		scale.appendChild(t)
+	}
+	attachFader($('.fader', el), inp.id, rows)
+	$$('.tog button', el).forEach((b) => b.onclick = () => {
+		const s = ps(inp.id), k = b.dataset.t
+		if (k === 'fine') s.fine = !s.fine
+		else s[k] = !((s[k] ?? S.store.page[k === 'pre' ? 'showPre' : 'showPost']))
+		savePs(); render()
+	})
+	const name = inp.id
+	const cur = () => S.inputs.find((i) => i.id === name)
+	if ($('.bottom [data-a=mute]', el)) $('.bottom [data-a=mute]', el).onclick = () => cmd({ cmd: 'mute', input: name, value: !cur().muted })
+	if ($('[data-a=pfl]', el)) $('[data-a=pfl]', el).onclick = () => cmd({ cmd: 'pfl', input: name, value: !cur().pfl })
+	const solo = $('[data-a=solo]', el) || document.createElement('button')
+	let holding = false
+	solo.addEventListener('pointerdown', (e) => { if (S.store.page.soloLatch) return; e.preventDefault(); holding = true; solo.setPointerCapture(e.pointerId); cmd({ cmd: 'solo', input: name, value: true }) })
+	const soloUp = () => { if (holding) { holding = false; cmd({ cmd: 'solo', input: name, value: false }) } }
+	solo.addEventListener('pointerup', soloUp)
+	solo.addEventListener('pointercancel', soloUp)
+	solo.addEventListener('click', () => { if (S.store.page.soloLatch) cmd({ cmd: 'solo', input: name, value: S.solo !== name }) })
+	el.addEventListener('click', (e) => {
+		const h = e.target.closest('.sec.collapsible h3')
+		if (!h) return
+		const sec = h.parentElement
+		sec.classList.toggle('collapsed')
+		collapsed[name + '/' + sec.dataset.id] = sec.classList.contains('collapsed')
+		LSset('collapsed', collapsed)
+	})
+	const grip = $('.grip', el)
+	grip.addEventListener('pointerdown', (e) => {
+		e.preventDefault(); grip.classList.add('drag')
+		const x0 = e.clientX, w0 = el.offsetWidth - (ps(name).pinned ? 260 : 0)
+		const mv = (ev) => {
+			const w = Math.max(200, Math.min(1000, w0 + ev.clientX - x0))
+			const targets = LS('match', false) ? S.inputs.map((i) => i.id) : [name]
+			for (const n of targets) { ps(n).width = w; const s = strips.get(n); if (s) s.el.style.width = w + (ps(n).pinned ? 260 : 0) + 'px' }
+		}
+		const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); grip.classList.remove('drag'); savePs() }
+		addEventListener('pointermove', mv); addEventListener('pointerup', up)
+	})
+	return el
+}
+
+function editing(el) { const ae = document.activeElement; return !!ae && el.contains(ae) && ae.matches('input[type=text], input[type=number], input[type=time], input[type=date], select, textarea') }
+
+function updateStrip(s, inp) {
+	const el = s.el
+	const rows = S.store.page.layout === 'rows'
+	const busy = editing(el) || el.querySelector('.knob.active')
+	const nameOf = (id) => (S.inputs.find((i) => i.id === id) || { name: id }).name
+	const role = inp.caps.role ? inp.caps.role.toUpperCase() : ''
+	const tag = inp.onBackup ? 'ON BACKUP' : inp.backupFor ? `BACKUP OF ${nameOf(inp.backupFor)}` : role
+	const nameHtml = `<span class="nm" data-tip="${esc(inp.name)}">${esc(inp.name)}</span>${tag ? `<span class="tag">${esc(tag)}</span>` : ''}`
+	if ($('.name', el).innerHTML !== nameHtml) $('.name', el).innerHTML = nameHtml
+	const sig = JSON.stringify([inp.blocks, inp.overrides, inp.sections, inp.settings, inp.routing, inp.balance, inp.delay, inp.mixOption, inp.monitor, inp.hasTrim, inp.trimDb, inp.target, inp.backupFor, inp.onBackup, S.store.sections, S.store.defaults, S.store.moduleCalibrateDb, S.inputs.map((i) => i.id + '\u0001' + i.name)])
+	if (sig !== s.sig && !busy) {
+		s.sig = sig
+		$('.basic', el).innerHTML = basicHtml(inp)
+		$('.sections', el).innerHTML = S.store.sections
+			.filter((sec) => sectionMode(inp, sec) !== 'hidden' && sec.controls.length)
+			.map((sec) => {
+				const mode = sectionMode(inp, sec)
+				const isCol = mode === 'collapsible' && (collapsed[inp.name + '/' + sec.id] ?? true)
+				const pc = inp.caps.processing
+				const kinds = pc && pc.addable ? META.processing.filter((k) => sec.controls.includes(k.kind) && pc.kinds.includes(k.kind)) : []
+				const add = kinds.length ? `<select class="addf" data-a="fadd" data-tip="Add processing to this input"><option value="">+ Add…</option>${kinds.map((k) => `<option value="${k.kind}">${esc(k.label)}</option>`).join('')}</select>` : ''
+				const body = sec.controls.map((c) => control(inp, c)).join('') + add
+				return body ? `<div class="sec ${mode === 'collapsible' ? 'collapsible' : ''} ${isCol ? 'collapsed' : ''}" data-id="${esc(sec.id)}"><h3>${esc(sec.name)}</h3><div class="body">${body}</div></div>` : ''
+			}).join('')
+		const advHtml = advancedHtml(inp)
+		for (const a of $$('.adv', el)) { const open = a.classList.contains('open'); a.innerHTML = advHtml; a.classList.toggle('open', open) }
+		wire(el, inp.id)
+	}
+	if (!dragging.has(inp.id)) setCap(el, dbToPos(inp.volumeDb), rows)
+	$('.vol', el).textContent = fmt(inp.volumeDb) + ' dB'
+	const rs = $('.rstate', el)
+	rs.className = 'rstate ' + inp.autoLevel
+	rs.textContent = inp.autoLevel === 'off' ? (inp.settings.autoLevelOn ? 'no target' : '') : inp.autoLevel
+	for (const b of $$('[data-a=mute]', el)) b.classList.toggle('on', inp.muted)
+	for (const b of $$('[data-a=pfl]', el)) b.classList.toggle('on', !!inp.pfl)
+	for (const b of $$('[data-a=solo]', el)) b.classList.toggle('on', S.solo === inp.id)
+	$('.fader', el).classList.toggle('fine', !!ps(inp.id).fine)
+	for (const t of $$('[data-live=state]', el)) t.textContent = inp.autoLevel
+	for (const t of $$('[data-live=target]', el)) t.textContent = inp.target === null ? 'none' : fmt(inp.target) + ' dB'
+	const p = S.store.page
+	for (const m of $$('.meter', el)) { $('.band', m).style.display = 'none'; $('.tgt', m).style.display = 'none' }
+	const meter = $(inp.settings.controlMode === 'trim' && inp.caps.trim ? '.meter.pre' : '.meter.post', el)
+	if (meter && inp.target !== null) {
+		const band = $('.band', meter), tgt = $('.tgt', meter)
+		const lo = mFrac(inp.target - inp.settings.bandDb), hi = mFrac(inp.target + inp.settings.bandDb), t = mFrac(inp.target)
+		band.style.display = tgt.style.display = ''
+		band.style.background = inp.autoLevel === 'riding' ? p.ridingColour : p.bandColour
+		tgt.style.background = p.targetColour
+		if (rows) { const w = meter.clientWidth - 20; band.style.left = 10 + lo * w + 'px'; band.style.width = (hi - lo) * w + 'px'; tgt.style.left = 10 + t * w - 1 + 'px' }
+		else { const h = meter.clientHeight - 20; band.style.bottom = 10 + lo * h + 'px'; band.style.height = (hi - lo) * h + 'px'; tgt.style.bottom = 10 + t * h - 1 + 'px' }
+	}
+}
+
+function setCap(el, pos, rows) {
+	const cap = $('.cap', el)
+	if (rows) cap.style.left = `calc(10px + (100% - 20px) * ${pos})`
+	else cap.style.top = `calc(10px + (100% - 20px) * ${1 - pos})`
+}
+
+// basic auto gain, at the top of the channel settings
+function basicHtml(inp) {
+	const on = inp.settings.autoLevelOn
+	return `<div class="btns"><button class="${on ? 'on' : ''}" data-a="autolevel" data-tip="Auto level on/off: keeps this input near its target by moving the ${inp.settings.controlMode === 'trim' && inp.caps.trim ? 'trim' : 'fader'} for you, so you don\'t have to">AUTO LEVEL ${on ? 'ON' : 'OFF'}</button><button data-a="capture" data-tip="This level please: sounds right? This grabs the level now as the target">THIS LEVEL</button><button data-a="cal" data-l="input" data-tip="Calibrate this input once, to its own level (${fmt(inp.settings.calibrateDb, 1)} dB)">CAL ${fmt(inp.settings.calibrateDb, 0)}</button><button data-a="cal" data-l="module" data-tip="Calibrate once, to the module level (${fmt(S.store.moduleCalibrateDb, 1)} dB)">CAL ${fmt(S.store.moduleCalibrateDb, 0)}</button></div>
+		<div class="stat"><span class="lbl">Target</span><span class="val" data-live="target" data-tip="The level auto level holds. Click to type your own." style="cursor:text">${inp.target === null ? 'none' : fmt(inp.target) + ' dB'}</span></div>
+		<div class="stat" data-tip="${esc(META.inputFields.bandDb.help)}"><span class="lbl">Leave alone within ±</span><span style="white-space:nowrap"><input type="number" data-a="band" value="${inp.settings.bandDb}" min="0" max="30" step="0.5" style="width:56px"> dB</span></div>
+		<div class="stat"><span class="lbl">Status</span><span class="val" data-live="state">${inp.autoLevel}</span></div>
+		<button data-a="adv" data-tip="Shows every auto gain and backup setting for this input. All the knobs.">SHOW ADVANCED ▸</button>`
+}
+
+function control(inp, c) {
+	const k = inp.caps
+	switch (c) {
+		case 'mute': return k.mute ? `<div class="btns"><button class="mute ${inp.muted ? 'on' : ''}" data-a="mute" data-tip="Mute: cuts this input from the output and recording">${inp.muted ? 'MUTED' : 'MUTE'}</button></div>` : ''
+		case 'monitor': return k.monitor ? `<div class="row"><span class="lbl" data-tip="What monitoring does with this input">Monitor</span><select data-a="monitor">${k.monitor.choices.map((o) => `<option value="${esc(o.id)}" ${inp.monitor === o.id ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select></div>` : ''
+		case 'balance': return k.balance ? `<div class="knobs">${knob({ label: 'Balance', value: Math.round((inp.balance - 0.5) * 200), min: -100, max: 100, step: 1, def: 0, key: 'balance', tip: 'Balance: -100 = left, 0 = centre, 100 = right. Double click to centre.' })}</div>` : ''
+		case 'delay': return k.delay ? `<div class="row"><span class="lbl" data-tip="Delays this input so it lines up with the video">${esc(k.delay.label)} (${esc(k.delay.unit)})</span><input type="number" data-a="delay" value="${inp.delay}" min="${k.delay.min}" max="${k.delay.max}" step="${k.delay.step}"></div>` : ''
+		case 'trim': return k.trim ? `<div class="knobs">${knob({ label: k.trim.label + (inp.hasTrim ? '' : ' (adds)'), value: inp.trimDb, min: k.trim.minDb, max: k.trim.maxDb, step: 0.1, def: 0, unit: 'dB', key: 'trim', tip: `${k.trim.label}: the gain before the fader. Double click for 0 dB.` })}</div>` : ''
+		case 'mixOption': return k.mixOption ? `<div class="row"><span class="lbl" data-tip="${esc(k.mixOption.label)}">${esc(k.mixOption.label)}</span><select data-a="mixOption">${k.mixOption.choices.map((o) => `<option value="${esc(o.id)}" ${inp.mixOption === o.id ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select></div>` : ''
+		case 'routing': return k.routing ? `<div class="tracks" style="grid-template-columns: repeat(${Math.max(1, Math.min(8, k.routing.targets.length))}, 1fr)">${k.routing.targets.map((t) => `<button class="${inp.routing[t.id] ? 'on' : ''}" data-a="route" data-t="${esc(t.id)}" data-tip="${esc(k.routing.label)}: ${esc(t.label)}">${esc(t.label)}</button>`).join('')}</div>` : ''
+		case 'backup': {
+			if (k.role) return ''
+			const others = S.inputs.filter((i) => i.id !== inp.id && !i.caps.role)
+			const sw = inp.backupFor ? `<button class="${inp.onBackup ? 'on' : ''}" data-a="bswitch" data-tip="Switch between the main and this backup, with a crossfade">${inp.onBackup ? 'ON BACKUP: BACK TO MAIN' : 'SWITCH TO BACKUP'}</button>` : ''
+			return `<div class="row" data-tip="${esc(META.inputFields.backupOf.help)}"><span class="lbl">Backup for</span><select data-a="sset" data-key="backupOf"><option value="">none</option>${others.map((o) => `<option value="${esc(o.id)}" ${inp.settings.backupOf === o.id ? 'selected' : ''}>${esc(o.name)}</option>`).join('')}</select></div>${sw}`
+		}
+		default: {
+			const kind = META.processing.find((x) => x.kind === c)
+			if (!kind || !k.processing || !k.processing.kinds.includes(c)) return ''
+			return inp.blocks.filter((b) => b.kind === c && !b.isTrim).map((b) => blockBox(b, kind, k.processing.addable)).join('')
+		}
+	}
+}
+
+/** One processing block: knobs for numbers, drop-downs for choices, all from the device's table */
+function blockBox(f, kind, removable) {
+	const bid = esc(f.id)
+	const knobs = kind.params.filter((p) => p.type === 'number').map((p) => knob({ label: p.label, value: Number(f.settings[p.key] ?? p.default), min: p.min, max: p.max, step: p.step, def: p.default, unit: p.unit || '', key: `${f.id}\u0001${p.key}`, tip: `${kind.label}: ${p.label}${p.unit ? ' (' + p.unit + ')' : ''}. Double click for the default (${p.default}).` })).join('')
+	const others = kind.params.filter((p) => p.type !== 'number').map((p) => {
+		const v = f.settings[p.key] ?? p.default
+		if (p.type === 'choice') return `<div class="row"><span class="lbl">${esc(p.label)}</span><select data-a="bset" data-b="${bid}" data-key="${p.key}">${p.choices.map((c) => `<option value="${esc(c.id)}" ${String(v) === c.id ? 'selected' : ''}>${esc(c.label)}</option>`).join('')}</select></div>`
+		if (p.type === 'bool') return `<div class="row"><span class="lbl">${esc(p.label)}</span><select data-a="bset" data-b="${bid}" data-key="${p.key}" data-bool="1"><option value="true" ${v ? 'selected' : ''}>On</option><option value="false" ${!v ? 'selected' : ''}>Off</option></select></div>`
+		return `<div class="row"><span class="lbl">${esc(p.label)}</span><input type="text" data-a="bset" data-b="${bid}" data-key="${p.key}" value="${esc(v)}"></div>`
+	}).join('')
+	const name = esc(f.name)
+	return `<div class="filter ${f.enabled ? '' : 'off'}"><div class="fhead"><span data-tip="${name}">${name}</span><button class="small ${f.enabled ? 'on' : ''}" data-a="bon" data-b="${bid}" data-tip="Switches this on or off">${f.enabled ? 'ON' : 'OFF'}</button>${removable ? `<button class="small" data-a="bdel" data-b="${bid}" data-tip="Removes this from the input">✕</button>` : ''}</div>${others}<div class="knobs">${knobs}</div></div>`
+}
+
+function fieldInput(key, field, value, attrs) {
+	if (field.type === 'bool') return `<select ${attrs}><option value="true" ${value ? 'selected' : ''}>On</option><option value="false" ${!value ? 'selected' : ''}>Off</option></select>`
+	if (field.type === 'choice') return `<select ${attrs}>${field.choices.map((c) => `<option value="${c.id}" ${value === c.id ? 'selected' : ''}>${esc(c.label)}</option>`).join('')}</select>`
+	if (field.type === 'input') return `<select ${attrs}><option value="">none</option>${(S.inputs || []).map((i) => `<option value="${esc(i.id)}" ${value === i.id ? 'selected' : ''}>${esc(i.name)}</option>`).join('')}</select>`
+	if (field.type === 'text') return `<input type="text" ${attrs} value="${esc(value)}">`
+	return `<input type="number" ${attrs} value="${value}" min="${field.min}" max="${field.max}" step="${field.step}">`
+}
+
+const GROUP_TITLES = { autolevel: 'Auto level', capture: 'This level please', limits: 'Limits', quiet: 'When it goes quiet', calibrate: 'Calibrate', backup: 'Backup feed' }
+/** Setting groups in order: the core's, then any the device adds */
+function groups() { const g = Object.keys(GROUP_TITLES); for (const f of Object.values(META.inputFields)) if (!g.includes(f.group)) g.push(f.group); return g.map((id) => [id, GROUP_TITLES[id] || id]) }
+function advancedHtml(inp) {
+	const body = groups().filter(([g]) => !(inp.caps.role && g === 'backup')).map(([g, title]) => `<h4>${title}</h4>` + Object.entries(META.inputFields).filter(([, f]) => f.group === g).map(([k, f]) => {
+		const ovr = k in inp.overrides
+		return `<div class="row" data-tip="${esc(f.help || '')}"><span class="lbl ${ovr ? 'ovr' : ''}">${esc(f.label)}${f.unit ? ' (' + esc(f.unit) + ')' : ''}</span>${ovr ? `<button class="reset" data-a="sreset" data-key="${k}" data-tip="Changed for this input. Press to put it back to the default.">↺</button>` : ''}${fieldInput(k, f, inp.settings[k], `data-a="sset" data-key="${k}"`)}</div>`
+	}).join('')).join('')
+	return `<div class="ahead"><b>AUTO GAIN · ${esc(inp.name)}</b><button class="small" data-a="pin" data-tip="Pin: keeps these settings in their own column instead of over the channel settings">${ps(inp.id).pinned ? 'UNPIN' : 'PIN'}</button><button class="small" data-a="advclose" data-tip="Close">✕</button></div><div class="abody">${body}<p class="help">Purple means changed for this input; ↺ puts it back to the default (Settings → Auto gain defaults).</p></div>`
+}
+
+function wire(el, name) {
+	const on = (sel, ev, fn) => $$(sel, el).forEach((x) => x.addEventListener(ev, (e) => fn(x, e)))
+	const inp = () => S.inputs.find((i) => i.id === name)
+	on('.sections [data-a=mute]', 'click', () => cmd({ cmd: 'mute', input: name, value: !inp().muted }))
+	on('[data-a=monitor]', 'change', (x) => cmd({ cmd: 'monitor', input: name, value: x.value }))
+	on('[data-a=mixOption]', 'change', (x) => cmd({ cmd: 'mixOption', input: name, value: x.value }))
+	on('[data-a=delay]', 'change', (x) => cmd({ cmd: 'delay', input: name, value: +x.value }))
+	on('[data-a=route]', 'click', (x) => cmd({ cmd: 'routing', input: name, target: x.dataset.t, value: !inp().routing[x.dataset.t] }))
+	on('[data-a=autolevel]', 'click', () => cmd({ cmd: 'autoLevel', input: name, value: !inp().settings.autoLevelOn }))
+	on('[data-a=capture]', 'click', () => cmd({ cmd: 'capture', input: name }))
+	on('[data-a=cal]', 'click', (x) => cmd({ cmd: 'calibrate', input: name, level: x.dataset.l }))
+	on('[data-a=band]', 'change', (x) => cmd({ cmd: 'inputSetting', input: name, key: 'bandDb', value: x.value }))
+	on('[data-live=target]', 'click', () => { const t = prompt('Target level (dB), blank to clear', inp().target ?? ''); if (t !== null) cmd({ cmd: 'setTarget', input: name, value: t }) })
+	on('[data-a=bswitch]', 'click', () => cmd({ cmd: 'backupSwitch', input: name, to: inp().onBackup ? 'main' : 'backup' }))
+	on('[data-a=fadd]', 'change', (x) => { if (x.value) cmd({ cmd: 'blockAdd', input: name, kind: x.value }); x.value = '' })
+	on('[data-a=bdel]', 'click', (x) => { if (confirm(`Remove ${x.dataset.b} from this input?`)) cmd({ cmd: 'blockRemove', input: name, block: x.dataset.b }) })
+	on('[data-a=bon]', 'click', (x) => cmd({ cmd: 'blockEnable', input: name, block: x.dataset.b, value: !x.classList.contains('on') }))
+	on('[data-a=bset]', 'change', (x) => cmd({ cmd: 'blockSet', input: name, block: x.dataset.b, key: x.dataset.key, value: x.dataset.bool ? x.value === 'true' : x.value }))
+	on('[data-a=sset]', 'change', (x) => cmd({ cmd: 'inputSetting', input: name, key: x.dataset.key, value: x.value }))
+	on('[data-a=sreset]', 'click', (x) => cmd({ cmd: 'inputSetting', input: name, key: x.dataset.key, value: null }))
+	on('[data-a=adv]', 'click', () => { if (!ps(name).pinned) $('.setcol .adv', el).classList.add('open') })
+	on('[data-a=advclose]', 'click', () => { if (ps(name).pinned) { ps(name).pinned = false; savePs(); render() } else $$('.adv', el).forEach((a) => a.classList.remove('open')) })
+	on('[data-a=pin]', 'click', () => { ps(name).pinned = !ps(name).pinned; savePs(); render() })
+	wireKnobs(el, (key, v) => {
+		if (key === 'balance') cmd({ cmd: 'balance', input: name, value: (v + 100) / 200 })
+		else if (key === 'trim') cmd({ cmd: 'trim', input: name, value: v })
+		else { const [b, k] = key.split('\u0001'); cmd({ cmd: 'blockSet', input: name, block: b, key: k, value: v }) }
+	})
+}
+
+function throttle(fn, ms = 40) {
+	let last = 0, timer = null, args = null
+	return (...a) => {
+		args = a
+		const now = Date.now()
+		if (now - last >= ms) { last = now; fn(...args) }
+		else if (!timer) timer = setTimeout(() => { timer = null; last = Date.now(); fn(...args) }, ms - (now - last))
+	}
+}
+
+// ---- the fader ----
+function attachFader(f, name, rows) {
+	const pointers = new Map()
+	let startPos = 0, startCoord = 0, lastTap = 0, moved = false
+	const send = throttle((db) => cmd({ cmd: 'volume', input: name, db }), 33)
+	const coord = (e) => (rows ? e.clientX : -e.clientY)
+	const len = () => (rows ? f.clientWidth : f.clientHeight) - 20
+	const strip = () => f.closest('.strip')
+	f.addEventListener('pointerdown', (e) => {
+		e.preventDefault()
+		f.setPointerCapture(e.pointerId)
+		pointers.set(e.pointerId, coord(e))
+		if (pointers.size > 1) { f.classList.add('fine'); return }
+		const inp = S.inputs.find((i) => i.id === name)
+		const now = Date.now()
+		if (S.store.page.doubleTapUnity && now - lastTap < 300) {
+			lastTap = 0
+			setCap(strip(), dbToPos(0), rows)
+			cmd({ cmd: 'volume', input: name, db: 0 })
+			return
+		}
+		lastTap = now
+		moved = false
+		dragging.add(name)
+		startPos = dbToPos(inp.volumeDb)
+		startCoord = coord(e)
+		cmd({ cmd: 'touch', input: name, value: true })
+	})
+	f.addEventListener('pointermove', (e) => {
+		if (!pointers.has(e.pointerId) || !dragging.has(name)) return
+		const c = coord(e)
+		const isFine = !!ps(name).fine || pointers.size > 1
+		f.classList.toggle('fine', isFine)
+		if (Math.abs(c - startCoord) > 3) moved = true
+		const pos = Math.max(0, Math.min(1, startPos + ((c - startCoord) / len()) * (isFine ? S.store.page.fineRatio : 1)))
+		startPos = pos
+		startCoord = c
+		setCap(strip(), pos, rows)
+		const db = posToDb(pos)
+		send(db === null ? null : Math.round(db * 10) / 10)
+	})
+	const end = (e) => {
+		pointers.delete(e.pointerId)
+		if (pointers.size) return
+		f.classList.toggle('fine', !!ps(name).fine)
+		if (dragging.has(name)) { dragging.delete(name); cmd({ cmd: 'touch', input: name, value: false }) }
+		if (moved) lastTap = 0
+	}
+	f.addEventListener('pointerup', end)
+	f.addEventListener('pointercancel', end)
+}
+
+// ---- meters ----
+function drawMeters(frame) {
+	if (!S) return
+	const p = S.store.page
+	const now = Date.now()
+	const rows = p.layout === 'rows'
+	for (const [name, s] of strips) {
+		const m = frame[name]
+		if (!m) continue
+		const [post, pre, level, , gr] = m
+		const pk = (peaks[name] ??= { post: [], pre: [] })
+		const draw = (cls, vals, hold) => {
+			const meter = $('.meter.' + cls, s.el)
+			if (!meter) return
+			$$('.ch', meter).forEach((ch, i) => {
+				const v = vals[i] ?? vals[0] ?? null
+				const f = mFrac(v)
+				const bar = ch.firstChild
+				bar.style.clipPath = rows ? `inset(0 ${(1 - f) * 100}% 0 0)` : `inset(${(1 - f) * 100}% 0 0 0)`
+				const h = (hold[i] ??= { v: -999, t: 0 })
+				const fv = v === null ? -999 : v
+				if (fv >= h.v) { h.v = fv; h.t = now }
+				else if (now - h.t > p.peakHoldMs) h.v = Math.max(fv, h.v - (p.peakFallDbPerS * (now - (h.last || now))) / 1000)
+				h.last = now
+				const pf = mFrac(h.v < -900 ? null : h.v)
+				const pkEl = ch.lastChild
+				if (rows) pkEl.style.left = `calc(${pf * 100}% - 2px)`; else pkEl.style.bottom = `calc(${pf * 100}% - 2px)`
+				pkEl.style.display = pf > 0 ? '' : 'none'
+			})
+		}
+		draw('post', post, pk.post)
+		draw('pre', pre, pk.pre)
+		for (const g of $$('.meter.gr', s.el)) {
+			const v = Math.max(0, Math.min(20, (gr || {})[g.dataset.gr] || 0))
+			const bar = $('.bar', g)
+			if (rows) { bar.style.height = '100%'; bar.style.width = (v / 20) * 100 + '%' } else bar.style.height = (v / 20) * 100 + '%'
+		}
+		const lv = $('.lvl', s.el)
+		if (lv) lv.textContent = level === null ? '' : fmt(level)
+	}
+}
+
+// ---- settings panel (floating, draggable, same size on every tab) ----
+const setEl = $('#settings')
+const savedPos = LS('setPos', null)
+if (savedPos) { setEl.style.left = Math.min(savedPos[0], innerWidth - 100) + 'px'; setEl.style.top = Math.min(savedPos[1], innerHeight - 60) + 'px' }
+$('#setHead').addEventListener('pointerdown', (e) => {
+	if (e.target.closest('button')) return
+	e.preventDefault()
+	const r = setEl.getBoundingClientRect(), x0 = e.clientX - r.left, y0 = e.clientY - r.top
+	const mv = (ev) => { setEl.style.left = Math.max(0, Math.min(innerWidth - 80, ev.clientX - x0)) + 'px'; setEl.style.top = Math.max(0, Math.min(innerHeight - 40, ev.clientY - y0)) + 'px' }
+	const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); LSset('setPos', [parseInt(setEl.style.left), parseInt(setEl.style.top)]) }
+	addEventListener('pointermove', mv); addEventListener('pointerup', up)
+})
+function openSettings(t) {
+	tab = t
+	$$('[data-tab]').forEach((x) => x.classList.toggle('on', x.dataset.tab === tab))
+	setEl.classList.add('open')
+	renderSettings(true)
+}
+$$('[data-tab]').forEach((b) => b.addEventListener('click', () => openSettings(b.dataset.tab)))
+
+let sectionsDraft = null
+let importFile = null
+const PAGE_FIELDS = [
+	['layout', 'Layout', 'choice', [['strips', 'Desk strips'], ['rows', 'Horizontal rows']], 'Desk strips side by side, or one row per input (handy in a narrow OBS dock).'],
+	['tooltips', 'Tooltips', 'bool', null, 'Shows little explanations like this one when you hover over things.'],
+	['tipsOnOpen', 'Tip of the day when the page opens', 'bool', null, 'Shows a tip each time the page opens.'],
+	['pflMode', 'PFL mode', 'choice', [['additive', 'Additive'], ['exclusive', 'Exclusive']], 'Additive: PFLs add up. Exclusive: a new PFL cancels the others.'],
+	['soloLatch', 'Solo latches', 'bool', null, 'On: solo stays on until you press it again. Off: solo only while held.'],
+	['law', 'Fader law', 'choice', [['desk', 'Desk'], ['linear', 'Linear dB']], 'Desk: unity three quarters of the way up, like a proper console. Linear: even dB spacing.'],
+	['faderTopDb', 'Fader top (dB)', 'number', null, 'The level at the top of the fader travel.'],
+	['faderBottomDb', 'Fader bottom, linear law (dB)', 'number', null, 'With the linear law, the lowest level above -∞.'],
+	['meterFloorDb', 'Meter floor (dB)', 'number', null, 'The bottom of the meters.'],
+	['meterTopDb', 'Meter top (dB)', 'number', null, 'The top of the meters.'],
+	['showPre', 'Pre-fader meters on for new strips', 'bool', null, 'Each strip has its own PRE button too.'],
+	['showPost', 'Post-fader meters on for new strips', 'bool', null, 'Each strip has its own POST button too.'],
+	['peakHoldMs', 'Peak hold (ms)', 'number', null, 'How long the peak marker holds before falling.'],
+	['peakFallDbPerS', 'Peak fall (dB/s)', 'number', null, 'How fast the peak marker falls after the hold.'],
+	['greenToDb', 'Green up to (dB)', 'number', null, 'Where the meter stops being green.'],
+	['yellowToDb', 'Yellow up to (dB)', 'number', null, 'Above this the meter is red.'],
+	['greenColour', 'Green colour', 'color', null, ''], ['yellowColour', 'Yellow colour', 'color', null, ''], ['redColour', 'Red colour', 'color', null, ''],
+	['bandColour', 'Auto level band colour', 'color', null, 'The shaded band either side of the target on the meter.'],
+	['ridingColour', 'Band colour while riding', 'color', null, ''],
+	['targetColour', 'Target line colour', 'color', null, ''],
+	['meterRateHz', 'Meter updates per second', 'number', null, 'Up to 30. Lower is kinder to slow devices.'],
+	['fineRatio', 'Fine mode ratio', 'number', null, 'How much smaller fader moves are in fine mode (0.2 = a fifth).'],
+	['doubleTapUnity', 'Double-tap a fader for 0 dB', 'bool', null, ''],
+]
+
+function renderSettings(force) {
+	const body = $('#sbody')
+	if (!force && editing(body)) return
+	if (!force && (tab === 'sections' || tab === 'io' || tab === 'recording')) return
+	const st = S.store
+	if (tab === 'page') {
+		body.innerHTML = `<p class="help">These live in the module, so every browser sees the same thing. You can set them from Companion too ("Fader page: change a setting").</p><div class="grid2">${PAGE_FIELDS.map(([k, l, t, ch, tip]) => {
+			const v = st.page[k]
+			let ctl
+			if (t === 'choice') ctl = `<select data-p="${k}">${ch.map(([id, lab]) => `<option value="${id}" ${v === id ? 'selected' : ''}>${lab}</option>`).join('')}</select>`
+			else if (t === 'bool') ctl = `<select data-p="${k}"><option value="true" ${v ? 'selected' : ''}>Yes</option><option value="false" ${!v ? 'selected' : ''}>No</option></select>`
+			else if (t === 'color') ctl = `<input type="color" data-p="${k}" value="${v}">`
+			else ctl = `<input type="number" data-p="${k}" value="${v}" step="any">`
+			return `<div class="row" data-tip="${esc(tip)}"><span class="lbl">${l}</span>${ctl}</div>`
+		}).join('')}</div>`
+		$$('[data-p]', body).forEach((x) => x.addEventListener('change', () => cmd({ cmd: 'page', key: x.dataset.p, value: x.value })))
+	} else if (tab === 'defaults') {
+		body.innerHTML = `<p class="help">Every input starts from these. Anything changed on an input itself (purple in its advanced settings) wins.</p>` + groups().map(([g, title]) => `<div class="card"><h4>${title}</h4><div class="grid2">${Object.entries(META.inputFields).filter(([, f]) => f.group === g && f.type !== 'input').map(([k, f]) => `<div class="row" data-tip="${esc(f.help || '')}"><span class="lbl">${esc(f.label)}${f.unit ? ' (' + esc(f.unit) + ')' : ''}</span>${fieldInput(k, f, st.defaults[k], `data-d="${k}"`)}</div>`).join('')}</div></div>`).join('')
+		$$('[data-d]', body).forEach((x) => x.addEventListener('change', () => cmd({ cmd: 'defaultSetting', key: x.dataset.d, value: x.value })))
+	} else if (tab === 'buttons') {
+		body.innerHTML = `<p class="help">The auto gain button on each input (Companion preset): <b>press</b> = this level please, <b>double tap</b> = calibrate to the input's own level, <b>press and hold</b> = calibrate to the module level below.</p>
+			<div class="grid2"><div class="row" data-tip="How quickly the second tap has to follow to count as a double tap"><span class="lbl">Double-tap window (ms)</span><input type="number" data-g="doubleTapMs" value="${st.gestures.doubleTapMs}"></div>
+			<div class="row" data-tip="How long you hold for it to count as press-and-hold"><span class="lbl">Hold time (ms)</span><input type="number" data-g="holdMs" value="${st.gestures.holdMs}"></div>
+			<div class="row" data-tip="The level press-and-hold calibrates to"><span class="lbl">Module calibrate level (dB)</span><input type="number" step="0.5" data-g="moduleCalibrateDb" value="${st.moduleCalibrateDb}"></div></div>`
+		$$('[data-g]', body).forEach((x) => x.addEventListener('change', () => cmd({ cmd: 'gestures', [x.dataset.g]: x.value })))
+	} else if (tab === 'sections') {
+		sectionsDraft = JSON.parse(JSON.stringify(st.sections))
+		drawSections()
+	} else if (tab === 'inputs') {
+		body.innerHTML = `<p class="help">Put inputs in order, hide the ones you don't need, and pick each input's own section choices (blank = the section's default).</p>` + S.inputs.map((inp, i) => `<div class="card"><div class="row"><b style="flex:1">${esc(inp.name)}</b>
+			<button class="small" data-up="${i}" data-tip="Move left">▲</button><button class="small" data-down="${i}" data-tip="Move right">▼</button>
+			<label class="chk"><input type="checkbox" data-hide="${esc(inp.id)}" ${inp.hidden ? 'checked' : ''}> Hidden</label></div>
+			<div class="grid2">${st.sections.map((sec) => `<div class="row"><span class="lbl">${esc(sec.name)}</span><select data-isec="${esc(sec.id)}" data-in="${esc(inp.id)}"><option value="">Default (${sec.mode})</option>${['hidden', 'open', 'collapsible'].map((m) => `<option value="${m}" ${inp.sections[sec.id] === m ? 'selected' : ''}>${m}</option>`).join('')}</select></div>`).join('')}</div></div>`).join('')
+		const order = () => S.inputs.map((x) => x.id)
+		const hidden = () => S.inputs.filter((x) => x.hidden).map((x) => x.id)
+		$$('[data-up],[data-down]', body).forEach((b) => b.addEventListener('click', () => {
+			const o = order(), i = +(b.dataset.up ?? b.dataset.down), j = b.dataset.up !== undefined ? i - 1 : i + 1
+			if (j < 0 || j >= o.length) return
+			;[o[i], o[j]] = [o[j], o[i]]
+			cmd({ cmd: 'order', order: o, hidden: hidden() })
+		}))
+		$$('[data-hide]', body).forEach((c) => c.addEventListener('change', () => {
+			const h = new Set(hidden()); if (c.checked) h.add(c.dataset.hide); else h.delete(c.dataset.hide)
+			cmd({ cmd: 'order', order: order(), hidden: [...h] })
+		}))
+		$$('[data-isec]', body).forEach((s) => s.addEventListener('change', () => cmd({ cmd: 'inputSection', input: s.dataset.in, section: s.dataset.isec, mode: s.value || null })))
+	} else if (tab === 'recording') {
+		drawRecording()
+	} else if (tab === 'io') {
+		drawIO()
+	} else if (tab === 'about') {
+		const V = S.versions || {}
+		const row = (label, now, latest, update, link, linkText) => `<div class="card"><h4>${label}</h4>
+			<div class="row"><span class="lbl">This version</span><span class="val">${esc(now || 'unknown')}</span></div>
+			<div class="row"><span class="lbl">Latest</span><span class="val">${esc(latest || 'not known yet')}</span></div>
+			<p class="help">${update ? '<b>A newer version is out.</b>' : latest ? 'Up to date. Nice and fresh.' : ''}</p>
+			<div class="btns"><button class="${update ? 'primary' : ''}" data-open="${esc(link)}">${linkText}</button></div></div>`
+		body.innerHTML = row(META.app.name + ' module', V.moduleVersion, V.moduleLatest, V.moduleUpdate, V.moduleDownload, 'Download the latest module') +
+			row(V.deviceLabel || META.device.software, V.deviceVersion, V.deviceLatest, V.deviceUpdate, V.deviceDownload, 'Download the latest ' + (V.deviceLabel || META.device.software)) +
+			`<p class="help">${V.checkedAt ? 'Last checked ' + new Date(V.checkedAt).toLocaleString() + '.' : 'Not checked yet.'} ${V.error ? esc(V.error) : ''} You can change how often I check in the Companion connection's settings. To install a module in Companion: Modules → Import module package.</p>`
+		$$('[data-open]', body).forEach((b) => b.onclick = () => window.open(b.dataset.open, '_blank', 'noopener'))
+	}
+}
+
+function drawRecording() {
+	const body = $('#sbody')
+	const r = S.recording, p = S.store.page
+	if (!r.available) { body.innerHTML = `<p class="help">${esc(META.device.label)} doesn't record, or I can't drive its recording from here.</p>`; return }
+	body.innerHTML = `<div class="card"><h4>Recording now</h4>
+		<div class="row"><span class="lbl">State</span><span class="val">${r.active ? (r.paused ? 'paused' : 'recording') : 'stopped'}</span></div>
+		<div class="row"><span class="lbl">Last file</span><span class="val">${esc(r.lastFile || 'none yet')}</span></div>
+		<div class="row" data-tip="Only counted when the recordings folder can be read from this computer"><span class="lbl">Files in the folder</span><span class="val">${r.fileCount ?? 'can\'t see the folder from here, sorry'}</span></div>
+		<div class="btns"><button id="rPause" ${r.active ? '' : 'disabled'}>${r.paused ? 'RESUME' : 'PAUSE'}</button><button id="rPlan">Plan the next start</button>${r.plan.nextStart ? '<button id="rClear">Clear the plan</button>' : ''}</div></div>
+		<div class="card"><h4>Where and what it's called</h4>
+		<div class="row" data-tip="Where recordings are saved, on the recording machine"><span class="lbl">Folder</span><input type="text" id="rDir" value="${esc(r.directory)}" style="width:60%"></div>
+		<div class="row" data-tip="What the recordings are called (OBS: put a prefix before OBS's date codes, e.g. Conference %CCYY-%MM-%DD %hh-%mm-%ss)"><span class="lbl">File name</span><input type="text" id="rFmt" value="${esc(r.fileName)}" style="width:60%"></div>
+		<div class="btns"><button class="primary" id="rSave">Save to ${esc(META.device.label)}</button></div></div>
+		<div class="card"><h4>Reminder</h4>
+		<div class="row" data-tip="When a start isn't automatic, how many minutes before it the 'Start recording?' reminder pops up"><span class="lbl">Remind this many minutes before</span><input type="number" data-p="recordLeadMin" value="${p.recordLeadMin}"></div>
+		<div class="row" data-tip="How long Snooze keeps the reminder quiet"><span class="lbl">Snooze for (minutes)</span><input type="number" data-p="recordSnoozeMin" value="${p.recordSnoozeMin}"></div></div>`
+	$('#rPause', body).onclick = () => cmd({ cmd: 'recordPause', value: !r.paused })
+	$('#rPlan', body).onclick = () => planFlow('PLAN THE NEXT START')
+	if ($('#rClear', body)) $('#rClear', body).onclick = () => cmd({ cmd: 'recordPlan', nextStart: null })
+	$('#rSave', body).onclick = async () => { await cmd({ cmd: 'recordFolder', value: $('#rDir', body).value }); await cmd({ cmd: 'recordName', value: $('#rFmt', body).value }); flash('Saved') }
+	$$('[data-p]', body).forEach((x) => x.addEventListener('change', () => cmd({ cmd: 'page', key: x.dataset.p, value: x.value })))
+}
+
+function drawSections() {
+	const body = $('#sbody')
+	body.innerHTML = `<p class="help">Sections stack top to bottom in each strip's settings column, under the basic auto gain controls. Tick what goes in each, then Save when you're happy.</p>` +
+		sectionsDraft.map((sec, i) => `<div class="card"><div class="row"><input type="text" data-sn="${i}" value="${esc(sec.name)}" style="flex:1;width:auto">
+		<select data-sm="${i}" data-tip="Hidden, always open, or open and close with a tap">${['hidden', 'open', 'collapsible'].map((m) => `<option value="${m}" ${sec.mode === m ? 'selected' : ''}>${m === 'open' ? 'Always open' : m === 'hidden' ? 'Hidden' : 'Collapsible'}</option>`).join('')}</select>
+		<button class="small" data-su="${i}">▲</button><button class="small" data-sd="${i}">▼</button><button class="small" data-sx="${i}" data-tip="Delete this section">✕</button></div>
+		<div class="checks">${META.controls.map((c) => `<label><input type="checkbox" data-sc="${i}" value="${c.id}" ${sec.controls.includes(c.id) ? 'checked' : ''}>${esc(c.label)}</label>`).join('')}</div></div>`).join('') +
+		`<div class="btns"><button id="sAdd">+ Section</button><button id="sSave" class="primary">Save sections</button></div>`
+	$$('[data-sn]', body).forEach((x) => x.addEventListener('input', () => (sectionsDraft[x.dataset.sn].name = x.value)))
+	$$('[data-sm]', body).forEach((x) => x.addEventListener('change', () => (sectionsDraft[x.dataset.sm].mode = x.value)))
+	$$('[data-sc]', body).forEach((x) => x.addEventListener('change', () => {
+		const sec = sectionsDraft[x.dataset.sc]
+		sec.controls = META.controls.map((c) => c.id).filter((id) => (id === x.value ? x.checked : sec.controls.includes(id)))
+	}))
+	const move = (i, j) => { if (j < 0 || j >= sectionsDraft.length) return; [sectionsDraft[i], sectionsDraft[j]] = [sectionsDraft[j], sectionsDraft[i]]; drawSections() }
+	$$('[data-su]', body).forEach((b) => b.addEventListener('click', () => move(+b.dataset.su, +b.dataset.su - 1)))
+	$$('[data-sd]', body).forEach((b) => b.addEventListener('click', () => move(+b.dataset.sd, +b.dataset.sd + 1)))
+	$$('[data-sx]', body).forEach((b) => b.addEventListener('click', () => { if (confirm('Delete this section?')) { sectionsDraft.splice(+b.dataset.sx, 1); drawSections() } }))
+	$('#sAdd').onclick = () => { sectionsDraft.push({ id: 's' + Date.now().toString(36), name: 'New section', controls: [], mode: 'collapsible' }); drawSections() }
+	$('#sSave').onclick = async () => { await cmd({ cmd: 'sections', sections: sectionsDraft }); flash('Sections saved') }
+}
+
+function drawIO() {
+	const body = $('#sbody')
+	let parts = ''
+	if (importFile) {
+		const st = importFile.store || importFile
+		const list = [['page', 'Page and meter settings'], ['sections', 'Sections'], ['defaults', 'Auto gain defaults'], ['gestures', 'Button timings and module calibrate level'], ['order', 'Input order and hidden inputs']]
+		for (const n of Object.keys(st.inputs || {})) list.push(['input:' + n, 'Input: ' + ((S.inputs.find((i) => i.id === n) || { name: n }).name)])
+		parts = `<div class="card"><h4>Import ${esc(importFile.exported ? 'from ' + importFile.exported.slice(0, 16).replace('T', ' ') : '')}</h4><div class="checks">${list.map(([id, l]) => `<label><input type="checkbox" data-part="${esc(id)}" checked>${esc(l)}</label>`).join('')}</div>
+			<p class="help">The settings in use now go into the autosave first, so you can roll this back if you change your mind.</p><div class="btns"><button id="iGo" class="primary">Import ticked parts</button><button id="iCancel">Cancel</button></div></div>`
+	}
+	body.innerHTML = `<div class="card"><h4>Export</h4><p class="help">Everything this module remembers: page, sections, auto gain defaults, buttons, input order, and every input's settings and targets. (Not the device's address or password, mind: those live in the Companion connection.)</p><div class="btns"><button id="eGo" class="primary">Download settings file</button></div></div>
+		<div class="card"><h4>Import</h4><input type="file" id="iFile" accept=".json,application/json"></div>${parts}
+		<div class="card"><h4>Autosave</h4><p class="help">${S.autosave ? 'Taken just before the last import.' : 'None yet. One gets taken before every import.'}</p><div class="btns"><button id="iRestore" ${S.autosave ? '' : 'disabled'}>Roll back to the autosave</button></div></div>`
+	$('#eGo').onclick = () => { const a = document.createElement('a'); a.href = '/export' + q(); a.download = ''; a.click() }
+	$('#iFile').onchange = async (e) => {
+		const file = e.target.files[0]
+		if (!file) return
+		try { const text = await file.text(); importFile = JSON.parse(text); importFile._text = text } catch { flash("Hmm, that isn't a settings file"); importFile = null }
+		drawIO()
+	}
+	if ($('#iGo')) {
+		$('#iGo').onclick = async () => {
+			const picked = $$('[data-part]:checked', body).map((x) => x.dataset.part)
+			const r = await cmd({ cmd: 'import', data: importFile._text, parts: picked })
+			if (r?.ok) { importFile = null; drawIO() }
+		}
+		$('#iCancel').onclick = () => { importFile = null; drawIO() }
+	}
+	$('#iRestore').onclick = async () => { if (confirm('Roll back to the autosave?')) { await cmd({ cmd: 'restoreAutosave' }); drawIO() } }
+}
+
+addEventListener('resize', () => { if (S) for (const [n, s] of strips) { const inp = S.inputs.find((i) => i.id === n); if (inp) updateStrip(s, inp) } })
+connect()
+</script>
+</body>
+</html>
