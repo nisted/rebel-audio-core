@@ -307,8 +307,9 @@ function engineRig() {
 	return { dev, engine, logs, changes }
 }
 
-test('engine on a fake device: auto level rides the trim, PFL/solo by caps, external changes recorded', async () => {
+test('engine on a fake device: auto level rides the trim, PFL/solo by caps, external changes recorded', async (t) => {
 	const { dev, engine, logs, changes } = engineRig()
+	t.after(() => engine.destroy())
 	dev.add('mic', -24)
 	dev.add('aux', -12)
 	dev.add('old', -18, CLASSIC_CAPS)
@@ -332,10 +333,17 @@ test('engine on a fake device: auto level rides the trim, PFL/solo by caps, exte
 	assert.equal(dev.get('mic').volumeDb, 0, 'fader left alone')
 	assert.ok(!dev.calls.includes('volume mic'))
 
-	// trim mode on an input without a trim falls back to the fader's range only
+	// trim mode on an input without a trim: auto level falls back to the fader, the trim action says why not
 	engine.setInputSetting('old', 'controlMode', 'trim')
 	engine.setTrim(engine.resolve('old')!, 3)
 	assert.ok(logs.some((l) => l.includes('has no trim')))
+	engine.setInputSetting('old', 'autoLevelOn', true)
+	engine.setInputSetting('old', 'calibrateMove', 'jump')
+	await sleep(600) // the mode change restarted its listening window
+	engine.calibrate(engine.resolve('old')!, -10)
+	await sleep(100)
+	assert.ok(dev.calls.includes('volume old'), 'calibrated on the fader: ' + logs.filter((l) => l.includes('OLD')).join(' | '))
+	assert.ok(!dev.calls.includes('trim old'))
 
 	// PFL and solo only touch inputs with monitoring
 	const mic = engine.resolve('mic')!
@@ -399,8 +407,9 @@ test('engine on a fake device: auto level rides the trim, PFL/solo by caps, exte
 	assert.ok(!logs.some((l) => l.startsWith('error')), logs.join('\n'))
 })
 
-test('page is served with the module name and draws from caps', async () => {
+test('page is served with the module name and draws from caps', async (t) => {
 	const { dev, engine } = engineRig()
+	t.after(() => engine.destroy())
 	dev.add('mic', -24)
 	engine.useDevice(dev)
 	for (let i = 0; i < 40 && engine.visible().length < 1; i++) await sleep(25)

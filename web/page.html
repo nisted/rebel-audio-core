@@ -557,7 +557,7 @@ function grKinds(inp) { const gk = new Set(META.processing.filter((k) => k.gainR
 
 function buildStrip(inp, rows) {
 	const st = ps(inp.id)
-	const pre = inp.caps.preMeter !== false && (st.pre ?? S.store.page.showPre), post = st.post ?? S.store.page.showPost
+	const pre = !!inp.caps.preMeter && (st.pre ?? S.store.page.showPre), post = st.post ?? S.store.page.showPost
 	const el = document.createElement('div')
 	el.className = 'strip' + (st.pinned ? ' pinned' : '')
 	el.dataset.id = inp.id
@@ -565,7 +565,7 @@ function buildStrip(inp, rows) {
 	el.innerHTML = `<div class="name"></div>
 		<div class="cols">
 			<div class="col fmcol">
-				<div class="tog">${inp.caps.preMeter === false ? '' : `<button class="${pre ? 'on' : ''}" data-t="pre" data-tip="Shows the pre-fader meter on this strip">PRE</button>`}<button class="${post ? 'on' : ''}" data-t="post" data-tip="Shows the post-fader meter on this strip">POST</button><button class="${st.fine ? 'on' : ''}" data-t="fine" data-tip="Fine: small fader moves on this strip (two fingers do the same trick)">FINE</button></div>
+				<div class="tog">${!inp.caps.preMeter ? '' : `<button class="${pre ? 'on' : ''}" data-t="pre" data-tip="Shows the pre-fader meter on this strip">PRE</button>`}<button class="${post ? 'on' : ''}" data-t="post" data-tip="Shows the post-fader meter on this strip">POST</button><button class="${st.fine ? 'on' : ''}" data-t="fine" data-tip="Fine: small fader moves on this strip (two fingers do the same trick)">FINE</button></div>
 				<div class="fm"><div class="meters">${pre ? meterHtml('pre', 'PRE') : ''}${post ? meterHtml('post', 'POST') : ''}${grKinds(inp).map((b) => `<div class="meter gr" data-gr="${esc(b)}" data-tip="Gain reduction: ${esc(b)}"><span class="mlbl">GR</span><div class="ch"><div class="bar"></div></div></div>`).join('')}</div>${pre || post ? `<div class="mscale" data-tip="Meter scale (dB)">${[0, -6, -12, -18, -24, -36, -48].filter((d) => d <= S.store.page.meterTopDb && d > S.store.page.meterFloorDb).map((d) => `<span style="bottom:${mFrac(d) * 100}%">${d}</span>`).join('')}</div>` : ''}<div class="fader" data-tip="The fader. Drag to move; double tap for 0 dB."><div class="track"></div><div class="scale"></div><div class="cap"></div></div></div>
 				<div class="readout"><span class="val vol"></span><span class="rstate"></span><span class="val lvl" data-tip="The level auto level is listening to right now"></span></div>
 				<div class="bottom">${inp.caps.mute ? '<button class="mute" data-a="mute" data-tip="Mute: cuts this input from the output and the recording">MUTE</button>' : '<span></span>'}${inp.caps.monitor ? `<button class="pfl" data-a="pfl" data-tip="PFL: have a listen to this input on ${esc(META.device.label)}'s monitoring (headphones). The output and recording don't change.">PFL</button><button class="solo" data-a="solo" data-tip="Solo: hear only this input on monitoring while held (or until pressed again with Solo latch on). Never touches the output or the recording.">SOLO</button>` : ''}</div>
@@ -573,7 +573,7 @@ function buildStrip(inp, rows) {
 			<div class="col setcol"><div class="basic"></div><div class="sections"></div><div class="adv"></div></div>
 			<div class="col advcol"><div class="adv"></div></div>
 		</div><div class="grip" data-tip="Drag to make this strip wider or narrower"></div>`
-	for (const bar of $$('.bar', el)) bar.style.background = zoneGradient(rows)
+	for (const bar of $$('.meter.pre .bar, .meter.post .bar', el)) bar.style.background = zoneGradient(rows)
 	const scale = $('.scale', el)
 	for (const db of [10, 5, 0, -5, -10, -20, -30, -40, -60]) {
 		if (db > S.store.page.faderTopDb) continue
@@ -667,7 +667,7 @@ function updateStrip(s, inp) {
 	for (const t of $$('[data-live=state]', el)) t.textContent = inp.autoLevel
 	for (const t of $$('[data-live=target]', el)) t.textContent = inp.target === null ? 'none' : fmt(inp.target) + ' dB'
 	const p = S.store.page
-	for (const m of $$('.meter', el)) { $('.band', m).style.display = 'none'; $('.tgt', m).style.display = 'none' }
+	for (const m of $$('.meter.pre, .meter.post', el)) { $('.band', m).style.display = 'none'; $('.tgt', m).style.display = 'none' }
 	const meter = $(inp.settings.controlMode === 'trim' && inp.caps.trim ? '.meter.pre' : '.meter.post', el)
 	if (meter && inp.target !== null) {
 		const band = $('.band', meter), tgt = $('.tgt', meter)

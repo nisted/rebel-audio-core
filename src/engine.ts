@@ -353,7 +353,11 @@ export class Engine extends EventEmitter {
 			autoLevel: undefined as unknown as AutoLevel,
 		}
 		inp.autoLevel = new AutoLevel({
-			settings: () => this.settings(inp.id),
+			// an input without a trim can only be levelled on its fader
+			settings: () => {
+				const s = this.settings(inp.id)
+				return inp.caps.trim || s.controlMode !== 'trim' ? s : { ...s, controlMode: 'fader' }
+			},
 			record: () => inputRecord(this.store, inp.id),
 			saveRecord: () => this.#dirty(),
 			setGain: (db) => {
@@ -466,10 +470,13 @@ export class Engine extends EventEmitter {
 			inp.postPeak = m.postPeak.map(mulToDb)
 			inp.prePeak = m.prePeak.map(mulToDb)
 			inp.gainReduction = m.gainReduction ?? {}
+			// no pre-fader meter (a classic desk): work it out from post-fader, while the fader's up and unmuted
+			const fader = inp.volumeDb === null || inp.muted ? 0 : Math.pow(10, inp.volumeDb / 20)
+			const pre = m.prePeak.length ? m.prePeak : fader > 0 ? m.postPeak.map((x) => x / fader) : []
 			inp.autoLevel.onMeter({
 				t,
 				mag: m.postMag,
-				prePeak: m.prePeak,
+				prePeak: pre,
 				faderDb: inp.volumeDb,
 				trimDb: inp.trimDb,
 				muted: inp.muted,
