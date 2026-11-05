@@ -5,7 +5,7 @@ import { mkdtempSync, writeFileSync, readdirSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Engine, type EngineHost } from '../src/engine.js'
-import { WebServer } from '../src/web.js'
+import { WebServer, pageServerError } from '../src/web.js'
 import { Beacon, parseBeacon, peerUrl, type BeaconMessage } from '../src/discovery.js'
 import { loadStore, newStore, applyImport } from '../src/settings.js'
 import type { Transport, TransportSet } from '../src/recordings/upload/transports.js'
@@ -296,4 +296,22 @@ test('recordings on the engine: start names the take from the row, stop renames 
 	await engine.recorder.stop()
 	await sleep(50)
 	assert.ok(existsSync(join(dir, 'Plain.wav')))
+})
+
+test('page server: a busy port is explained in plain words', async () => {
+	const { createServer } = await import('node:net')
+	const blocker = createServer()
+	await new Promise<void>((r) => blocker.listen(0, '127.0.0.1', () => r()))
+	const port = (blocker.address() as { port: number }).port
+	const err = await new Promise<NodeJS.ErrnoException>((r) => {
+		const s = createServer()
+		s.on('error', r)
+		s.listen(port, '127.0.0.1')
+	})
+	blocker.close()
+	const msg = pageServerError(err, port)
+	assert.match(msg, new RegExp(`port ${port} is already in use`))
+	assert.match(msg, /Fader page port/)
+	assert.match(pageServerError(Object.assign(new Error('x'), { code: 'EACCES' }), 80), /above 1024/)
+	assert.match(pageServerError(Object.assign(new Error('boom'), { code: 'EWHAT' }), 1), /couldn't start: boom/)
 })

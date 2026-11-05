@@ -34,6 +34,20 @@ import { parseDb } from './law.js'
 import type { ImportPart, PageSettings, Section, SectionMode } from './settings.js'
 
 /** The page with this module's name filled in */
+/** The page server couldn't start: say why in plain words */
+export function pageServerError(e: NodeJS.ErrnoException, port: number, bind?: string): string {
+	switch (e.code) {
+		case 'EADDRINUSE':
+			return `Fader page: port ${port} is already in use by something else on this computer (another connection's page, perhaps). Pick a different "Fader page port" in the connection settings.`
+		case 'EACCES':
+			return `Fader page: this computer won't let the module use port ${port}. Pick a port above 1024 in the connection settings.`
+		case 'EADDRNOTAVAIL':
+			return `Fader page: this computer hasn't got the address ${bind}, so the page can't sit on it. Check "Fader page available on" in the connection settings.`
+		default:
+			return `Fader page couldn't start: ${e.message}`
+	}
+}
+
 export function pageHtml(appId: string, appName: string): string {
 	const esc = (t: string) => t.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
 	return PAGE_HTML.replaceAll('%APP_NAME_UPPER%', esc(appName.toUpperCase())).replaceAll('%APP_NAME%', esc(appName)).replaceAll('%APP_ID%', esc(appId))
@@ -89,7 +103,7 @@ export class WebServer {
 
 	start(): void {
 		const server = createServer((req, res) => void this.#handle(req, res))
-		server.on('error', (e) => this.#log('error', `Web page server: ${e.message}`))
+		server.on('error', (e) => this.#log('error', pageServerError(e, this.#opts.port, this.#opts.bind)))
 		server.listen(this.#opts.port, this.#opts.bind || '0.0.0.0', () => {
 			this.#log('info', `Fader page on port ${this.port}`)
 			const b = this.#opts.beacon
